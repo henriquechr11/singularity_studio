@@ -1,0 +1,4 @@
+Black Hole by NestaEric
+https://sketchfab.com/3d-models/black-hole-e410da98b1e5445eae2acafaaa53587d
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+Adaptations: legacy material conversion, removal of distant planet, mesh simplification, WebP textures, Draco compression; additional cinematic lighting and effects.

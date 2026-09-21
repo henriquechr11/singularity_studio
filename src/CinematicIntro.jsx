@@ -8,7 +8,7 @@ function initialMode() {
   return 'loading'
 }
 
-export default function CinematicIntro({ lang, siteRef, onReveal }) {
+export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }) {
   const [mode, setMode] = useState(initialMode)
   const [complete, setComplete] = useState(false)
   const trackRef = useRef(null), stageRef = useRef(null), canvasRef = useRef(null)
@@ -60,7 +60,8 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
 
   useEffect(() => {
     const track = trackRef.current, stage = stageRef.current, site = siteRef.current
-    let frame, last = performance.now(), span = track.offsetHeight, target = 0, dirty = true
+    let frame, holdTimer, holding = false, hasHeld = false
+    let last = performance.now(), span = track.offsetHeight, target = 0, dirty = true
     let samples = 0, slowTime = 0, downgraded = false
     const notifyReveal = reveal => {
       if (state.current.revealed === reveal) return
@@ -69,7 +70,43 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
       onReveal(reveal)
       if (reveal && stage.contains(document.activeElement)) site.querySelector('#hero-title')?.focus({ preventScroll: true })
     }
+    const finishHold = () => {
+      if (!holding) return
+      holding = false
+      clearTimeout(holdTimer)
+      stage.dataset.phase = 'complete'
+      site.dataset.introPhase = 'ready'
+      onHoldChange(false)
+    }
+    const beginHold = () => {
+      hasHeld = true
+      holding = true
+      state.current.progress = 1
+      target = 1
+      stage.dataset.phase = 'hero-entry'
+      site.dataset.introPhase = 'entering'
+      onHoldChange(true)
+      window.dispatchEvent(new CustomEvent('singularity:skip-intro', { detail: span }))
+      window.scrollTo({ top: span, behavior: 'instant' })
+      notifyReveal(true)
+      holdTimer = window.setTimeout(finishHold, 1000)
+    }
     const readScroll = () => {
+      if (holding) {
+        target = 1
+        if (Math.abs(window.scrollY - span) > 1) window.scrollTo({ top: span, behavior: 'instant' })
+        return
+      }
+      // Once the hero has been reached, it becomes the beginning of the site.
+      // Keep the cinematic traversal one-way instead of revealing it again when
+      // the user scrolls above the hero or presses Home.
+      if (hasHeld && window.scrollY < span) {
+        target = 1
+        window.dispatchEvent(new CustomEvent('singularity:skip-intro', { detail: span }))
+        window.scrollTo({ top: span, behavior: 'instant' })
+        dirty = true
+        return
+      }
       target = clamp01(window.scrollY / Math.max(1, span))
       if (window.scrollY > 1) state.current.controlled = true
       dirty = true
@@ -80,6 +117,8 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
     window.addEventListener('resize', resize)
     window.addEventListener('scroll', readScroll, { passive: true })
     const goToSite = () => {
+      finishHold()
+      hasHeld = true
       state.current.controlled = true
       state.current.progress = 1
       window.dispatchEvent(new CustomEvent('singularity:skip-intro', { detail: span }))
@@ -91,16 +130,25 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
     // The shot has no visible controls. Native PageDown/Space scroll it;
     // Escape remains a keyboard shortcut to the site.
     const onKeyDown = event => {
+      if (holding && [' ', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault()
+        return
+      }
       if (event.key === 'Escape' && !state.current.revealed) {
         event.preventDefault()
         goToSite()
       }
     }
     window.addEventListener('keydown', onKeyDown)
+    const preventScroll = event => { if (holding) event.preventDefault() }
+    window.addEventListener('wheel', preventScroll, { passive: false })
+    window.addEventListener('touchmove', preventScroll, { passive: false })
     const hashNavigation = () => {
       if (!location.hash || location.hash === '#top') return
       const destination = document.getElementById(location.hash.slice(1))
       if (destination && site.contains(destination)) {
+        finishHold()
+        hasHeld = true
         state.current.progress = 1
         site.style.setProperty('--intro-offset', '0px')
         site.dataset.pinned = 'false'
@@ -125,6 +173,7 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
       const current = state.current
       const isStatic = current.mode === 'static' || current.mode === 'reduced'
       const isReduced = current.mode === 'reduced'
+      if (isReduced && holding) finishHold()
       if (!dirty && current.progress === target && (current.progress === 1 || isStatic) && (!isReduced || current.revealed)) return
       if (isReduced) {
         target = 1; current.progress = 1
@@ -142,7 +191,13 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
       stage.style.setProperty('--blackout', smoothstep(FLIGHT.blackoutStart, FLIGHT.blackoutEnd, p).toFixed(4))
       stage.dataset.progress = p.toFixed(4)
       stage.dataset.control = current.controlled ? 'scroll' : 'auto'
-      notifyReveal(p >= FLIGHT.revealEnd)
+      const reachedSite = p >= FLIGHT.revealEnd
+      if (reachedSite && !current.revealed) {
+        if (!isReduced && !hasHeld) beginHold()
+        else notifyReveal(true)
+      } else if (!reachedSite && current.revealed && !holding) {
+        notifyReveal(false)
+      }
       if (engineRef.current && current.mode === 'ready' && p < FLIGHT.revealEnd) {
         const pose = engineRef.current.render({ progress: p, delta, scrollControlled: current.controlled, paused: false })
         if (pose) { stage.dataset.distance = pose.distance.toFixed(3); stage.dataset.fov = pose.fov.toFixed(2); stage.dataset.centerX = pose.centerX.toFixed(3) }
@@ -156,19 +211,23 @@ export default function CinematicIntro({ lang, siteRef, onReveal }) {
     }
     readScroll()
     // Restored scroll positions should show their destination immediately.
-    if (target >= 1) state.current.progress = 1
+    if (target >= 1) { state.current.progress = 1; hasHeld = true }
     hashNavigation()
     frame = requestAnimationFrame(update)
     return () => {
       cancelAnimationFrame(frame)
+      clearTimeout(holdTimer)
+      if (holding) onHoldChange(false)
       observer.disconnect()
       window.removeEventListener('resize', resize)
       window.removeEventListener('scroll', readScroll)
       window.removeEventListener('hashchange', hashNavigation)
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('wheel', preventScroll)
+      window.removeEventListener('touchmove', preventScroll)
     }
-  }, [siteRef, onReveal])
+  }, [siteRef, onReveal, onHoldChange])
 
   return <section className={`cinematic-intro intro-${mode}`} ref={trackRef} aria-label={lang === 'pt' ? 'Introdução: travessia da singularidade' : 'Introduction: crossing the singularity'}>
     <div className={`intro-stage ${complete ? 'intro-complete' : ''}`} ref={stageRef} data-mode={mode} inert={complete} aria-hidden={complete}>

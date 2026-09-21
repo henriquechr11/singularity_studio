@@ -1,0 +1,1436 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020814">
+  <meta name="description" content="Pulsar 3D interativo: estrela de nêutrons, jatos de plasma e controles de rotação, inclinação e luz.">
+  <title>Pulsar — uma estrela de nêutrons em movimento</title>
+  <style>
+    html { color-scheme: dark; background: #02050b; }
+    body { margin: 0; min-height: 100vh; min-height: 100svh; }
+    main { width: 100%; }
+    .standalone-loading { padding: 40px; font: 14px/1.7 system-ui, sans-serif; color: #bfe6ff; }
+    @media (max-width: 600px) { body { padding: 0; display: block; } main { border: 0; } }
+    .pulsar-mount {
+  --pulsar-ice: #4cc9f0;
+  --pulsar-text: #eef5ff;
+  --pulsar-muted: #94a5ba;
+  color: var(--pulsar-text);
+  background: #05070f;
+  font-family: 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+.pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { box-sizing: border-box; }
+.pulsar-view { display: grid; grid-template-columns: minmax(0, 1fr) 296px; }
+.pulsar-viewport { position: relative; min-width: 0; aspect-ratio: 1; align-self: center; background: #020814; overflow: hidden; }
+.pulsar-canvas-host { position: absolute; inset: 0; }
+.pulsar-canvas-host canvas { display: block; width: 100%; height: 100%; touch-action: none; outline-offset: -3px; }
+.pulsar-mount :is(button, input, summary, canvas):focus-visible { outline: 2px solid var(--pulsar-ice); outline-offset: 4px; }
+.pulsar-mount canvas:focus-visible { outline-offset: -4px; }
+.pulsar-status { position: absolute; top: 25px; left: 25px; display: flex; align-items: center; gap: 8px; color: #b0c2d8; font-size: 11px; pointer-events: none; }
+.pulsar-status i { width: 4px; height: 4px; background: #8fc6ff; border-radius: 50%; box-shadow: 0 0 8px #338aff; }
+.pulsar-status[data-paused='true'] i { background: #8291a4; box-shadow: none; }
+.pulsar-gesture { position: absolute; bottom: 21px; left: 24px; right: 24px; margin: 0; text-align: center; font-size: 10px; line-height: 1.7; color: #9aadc5; pointer-events: none; }
+.pulsar-accessible-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pulsar-message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 40px; background: #020814; color: #b7c9df; text-align: center; font-size: 13px; line-height: 1.8; }
+.pulsar-mount [hidden] { display: none !important; }
+.pulsar-panel { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 52px 28px 30px; background: #050b15; border-left: 1px solid #b1d0ff13; }
+.pulsar-heading h2 { margin: 0; font-family: var(--display, 'Arial Narrow', sans-serif); font-weight: 500; font-size: 58px; letter-spacing: -2px; line-height: 1; }
+.pulsar-heading h2 span { color: #80b5ff; }
+.pulsar-type { margin: 12px 0 0; font-size: 12px; color: var(--pulsar-ice); }
+.pulsar-description { margin: 20px 0 0; font-size: 12px; line-height: 1.85; color: var(--pulsar-muted); }
+.pulsar-ranges { display: grid; gap: 15px; padding: 0; margin: 30px 0 20px; border: 0; min-width: 0; }
+.pulsar-ranges legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.pulsar-ranges:disabled { opacity: .45; }
+.pulsar-range { display: block; min-width: 0; }
+.pulsar-range > span { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 11px; line-height: 1.5; color: #b7c7d9; }
+.pulsar-range output { color: #e6f2ff; font-size: 11px; font-variant-numeric: tabular-nums; min-width: 35px; text-align: right; }
+.pulsar-range input { display: block; appearance: none; width: 100%; height: 24px; padding: 0; margin: 5px 0 0; background: transparent; cursor: pointer; touch-action: pan-y; border: 0; border-radius: 0; }
+.pulsar-range input::-webkit-slider-runnable-track { height: 2px; border-radius: 1px; background: linear-gradient(to right, #6c9cd0 var(--range-progress), #253144 var(--range-progress)); }
+.pulsar-range input::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; margin-top: -4px; border: 0; border-radius: 50%; background: #c1deff; box-shadow: 0 0 0 4px #80aeee10; }
+.pulsar-range input::-moz-range-track { height: 2px; background: #253144; }
+.pulsar-range input::-moz-range-progress { height: 2px; background: #6c9cd0; }
+.pulsar-range input::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: #c1deff; }
+.pulsar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pulsar-mount button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 12px; border: 1px solid #c2dcff25; border-radius: 3px; color: #caddf2; background: transparent; font: inherit; font-size: 10px; cursor: pointer; transition: background .2s, border-color .2s; }
+.pulsar-mount button:hover { background: #88b5ff12; border-color: #b4d3ff66; }
+.pulsar-mount button:disabled { opacity: .4; cursor: default; }
+.pulsar-actions .pulsar-pause { flex: 1; background: #97c7ff13; }
+.pulsar-actions .pulsar-reset { flex: 1.3; }
+.pulsar-mount svg { display: block; flex: 0 0 auto; }
+.pulsar-about { margin-top: 25px; color: var(--pulsar-muted); border-top: 1px solid #c2dcff18; padding-top: 18px; }
+.pulsar-about summary { font-size: 11px; cursor: pointer; list-style-position: inside; }
+.pulsar-about p { margin: 14px 0 0; font-size: 11px; line-height: 1.85; }
+
+/* Scoped overrides preserve the other project dialogs. Native dialog scroll
+   remains available when the panel grows or the viewport is short. */
+.project-dialog.pulsar-dialog { width: min(1080px, 94vw); max-width: none; max-height: 94dvh; padding: 0; overflow: auto; overscroll-behavior: contain; background: #02060d; border: 1px solid #bedcff24; }
+.pulsar-dialog .dialog-close { z-index: 3; width: 32px; height: 32px; top: 12px; right: 12px; background: #071221cf; color: #c6dbf6; border-color: #bedcff25; }
+
+@media (max-width: 760px) {
+  .pulsar-view { grid-template-columns: minmax(0, 1fr) 260px; }
+  .pulsar-panel { padding: 50px 20px 25px; }
+  .pulsar-viewport { min-height: 440px; aspect-ratio: auto; align-self: stretch; }
+  .pulsar-heading h2 { font-size: 48px; }
+}
+
+@media (max-width: 600px) {
+  .project-dialog.pulsar-dialog { width: calc(100% - 20px); max-height: 94dvh; }
+  .pulsar-view { grid-template-columns: minmax(0, 1fr); }
+  .pulsar-viewport { aspect-ratio: 1; min-height: 0; }
+  .pulsar-panel { display: block; padding: 25px 25px 28px; border-left: 0; border-top: 1px solid #b1d0ff13; }
+  .pulsar-heading h2 { font-size: 48px; }
+  .pulsar-type { margin-top: 9px; }
+  .pulsar-description { margin-top: 15px; max-width: 390px; }
+  .pulsar-ranges { margin-top: 25px; gap: 17px; }
+  .pulsar-range > span, .pulsar-range output { font-size: 12px; }
+  .pulsar-range input { height: 30px; }
+  .pulsar-actions button { min-height: 44px; font-size: 11px; }
+  .pulsar-status { top: 20px; left: 20px; font-size: 10px; }
+  .pulsar-gesture { bottom: 14px; left: 16px; right: 16px; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { transition: none !important; }
+}
+
+/* LANDING — mobile first. Tokens: night #05070f, cyan #4cc9f0,
+   violet #a58bfa, ice #eef5ff, muted #a2afc4. */
+.pulsar-mount { --pulsar-violet: #a58bfa; --pulsar-muted: #a2afc4; overflow: clip; }
+.pulsar-mount :is(h1, h2, h3, .pulsar-wordmark, .pulsar-fact strong) { font-family: 'Space Grotesk', sans-serif; }
+.pulsar-mount :is(h1, h2, h3, p) { margin: 0; }
+.pulsar-mount button { min-height: 44px; }
+.pulsar-topbar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 6%; padding-right: 76px; }
+.pulsar-wordmark { display: inline-flex; align-items: center; gap: 12px; font-size: 25px; letter-spacing: -1.2px; }
+.pulsar-wordmark > span { color: var(--pulsar-ice); font-size: 26px; }
+.pulsar-topbar > span:last-child { display: none; color: var(--pulsar-muted); font-size: 11px; }
+
+/* 1. Hero: a single luminous axis is the visual signature. */
+.pulsar-hero { position: relative; isolation: isolate; min-height: 670px; min-height: min(780px, 95svh); display: flex; align-items: center; padding: 190px 7% 145px; }
+.pulsar-hero-copy { position: relative; z-index: 1; max-width: 660px; }
+.pulsar-hero h1 { max-width: 620px; font-size: clamp(44px, 7.2vw, 96px); font-weight: 500; line-height: 1.03; letter-spacing: -.065em; text-wrap: balance; }
+.pulsar-hero-copy > p { max-width: 410px; margin-top: 26px; font-size: 14px; line-height: 1.85; color: #bdc9db; }
+.pulsar-mount .pulsar-explore { min-width: 152px; justify-content: space-between; margin-top: 32px; padding: 14px 20px; font-size: 13px; color: var(--pulsar-text); border-color: #4cc9f066; border-radius: 30px; background: #4cc9f00c; }
+.pulsar-explore span { color: var(--pulsar-ice); font-size: 20px; }
+.pulsar-hero-foot { position: absolute; bottom: 25px; left: 7%; right: 7%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-motion { font-size: 10px; border: 0; padding: 8px 0; color: var(--pulsar-muted); }
+.pulsar-stars { position: absolute; inset: -70px 0 0; z-index: -2; opacity: .55; background-image: radial-gradient(1px 1px at 13% 19%, #eef5ff 99%, transparent), radial-gradient(1px 1px at 78% 72%, #4cc9f0 99%, transparent), radial-gradient(1px 1px at 49% 42%, #eef5ff 99%, transparent), radial-gradient(1.5px 1.5px at 81% 21%, #a58bfa 99%, transparent); background-size: 193px 223px, 271px 191px, 337px 283px, 419px 337px; animation: pulsar-stars 8s ease-in-out infinite alternate; mask-image: linear-gradient(#000, #000 70%, transparent); }
+.pulsar-lighthouse { position: absolute; z-index: -1; width: 380px; height: 380px; right: -110px; top: -60px; transform: rotate(-28deg); pointer-events: none; opacity: .8; }
+.pulsar-lighthouse::before { content: ''; position: absolute; inset: -45%; background: radial-gradient(ellipse, #4cc9f018, #a58bfa08 30%, transparent 65%); }
+.pulsar-lighthouse i { position: absolute; width: 7px; height: 135%; left: 50%; top: -17%; background: linear-gradient(transparent, #4cc9f078 30%, #ebfcff 50%, #4cc9f078 70%, transparent); filter: blur(2px); box-shadow: 0 0 38px #4cc9f02a; animation: pulsar-beacon 2s ease-in-out infinite; }
+.pulsar-lighthouse b { position: absolute; inset: 23%; border: 1px solid #4cc9f080; border-radius: 50%; transform: rotateX(65deg); box-shadow: 0 0 26px #4cc9f025, inset 0 0 20px #4cc9f020; animation: pulsar-glow 2s ease-in-out infinite; }
+.pulsar-lighthouse span { position: absolute; inset: 46%; border-radius: 50%; background: #e8faff; box-shadow: 0 0 24px #4cc9f0, 0 0 70px #4cc9f0b3, 0 0 130px #9271ee66; }
+.pulsar-glow { animation: pulsar-glow 2s ease-in-out infinite; }
+.pulsar-divider { position: relative; }
+.pulsar-divider::before { content: ''; position: absolute; top: 0; left: 7%; right: 7%; height: 1px; background: linear-gradient(90deg, #4cc9f050, #a58bfa30, transparent); animation: pulsar-beacon 2s ease-in-out infinite; }
+
+/* 2. Scene and annotations. Labels are positioned by the 3D camera. */
+.pulsar-model, .pulsar-facts { padding: 55px 7%; }
+.pulsar-section-heading { display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px; }
+.pulsar-section-heading h2 { font-size: clamp(30px, 4vw, 48px); font-weight: 400; line-height: 1.12; letter-spacing: -.045em; }
+.pulsar-section-heading h2 { scroll-margin-top: 40px; }
+.pulsar-section-heading p { font-size: 12px; line-height: 1.8; color: var(--pulsar-muted); }
+.pulsar-view { grid-template-columns: minmax(0, 1fr); border: 1px solid #4cc9f025; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at 35% 45%, #11243b66, transparent 65%); }
+.pulsar-viewport { aspect-ratio: auto; height: 440px; min-height: 0; align-self: stretch; background: transparent; }
+.pulsar-panel { padding: 30px 24px; border-left: 0; border-top: 1px solid #4cc9f020; background: #090d18a6; }
+.pulsar-heading h2 { font-size: 32px; letter-spacing: -1.5px; }
+.pulsar-heading .pulsar-type { margin-top: 10px; }
+.pulsar-heading .pulsar-description { margin-top: 16px; }
+.pulsar-about p { margin-top: 14px; }
+.pulsar-gesture { font-size: 10px; bottom: 16px; }
+.pulsar-hotspots { position: absolute; inset: 0; pointer-events: none; }
+.pulsar-hotspot { position: absolute; max-width: 205px; pointer-events: auto; z-index: 1; }
+.pulsar-hotspot:has([aria-expanded='true']) { z-index: 2; }
+.pulsar-mount .pulsar-hotspot button { min-height: 44px; padding: 5px 9px; border: 1px solid #4cc9f033; border-radius: 24px; background: #05070fd9; backdrop-filter: blur(8px); color: #d5efff; font-size: 10px; white-space: nowrap; }
+.pulsar-hotspot i { width: 6px; height: 6px; border-radius: 50%; background: var(--pulsar-ice); box-shadow: 0 0 10px #4cc9f0; flex-shrink: 0; }
+.pulsar-hotspot p { padding: 12px; margin-top: 5px; font-size: 11px; line-height: 1.65; background: #101726f5; border: 1px solid #4cc9f033; border-radius: 8px; color: #d0dcec; }
+.pulsar-message { z-index: 3; background: #070b15; }
+
+/* 3. Facts and a quiet closing. */
+.pulsar-fact-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pulsar-fact { min-width: 0; padding: 27px 22px; border: 1px solid #4cc9f029; border-radius: 8px; background: linear-gradient(145deg, #101725, #080b15); }
+.pulsar-fact strong { display: block; font-size: 46px; font-weight: 400; letter-spacing: -2px; line-height: 1.3; color: #def7ff; }
+.pulsar-fact strong small { font-size: 16px; letter-spacing: -.4px; }
+.pulsar-fact strong > span { color: var(--pulsar-violet); font-size: 28px; }
+.pulsar-fact h3 { font-size: 14px; font-weight: 500; margin: 14px 0 10px; color: #d5e0f2; }
+.pulsar-fact p { max-width: 300px; font-size: 12px; line-height: 1.85; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-closing { padding: 80px 0; font-family: 'Space Grotesk', sans-serif; text-align: center; font-size: clamp(24px, 3.5vw, 42px); line-height: 1.35; letter-spacing: -.04em; color: #c8d4e8; }
+.pulsar-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding-top: 24px; border-top: 1px solid #a58bfa25; }
+.pulsar-footer > span:nth-child(2) { font-size: 11px; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-top { border: 0; padding: 0; font-size: 11px; }
+.pulsar-reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s ease; }
+.pulsar-reveal.is-visible { opacity: 1; transform: none; }
+
+/* The PULSAR project opens as a full-page experience; all other dialogs retain their layout. */
+.project-dialog.pulsar-dialog { width: 100%; height: 100dvh; max-height: 100dvh; max-width: none; margin: 0; border: 0; border-radius: 0; background: #05070f; }
+.pulsar-dialog .dialog-close { position: fixed; top: 20px; right: 22px; z-index: 10; width: 40px; height: 40px; background: #0d1623ed; }
+.pulsar-dialog .dialog-close:hover { background: #183048; color: #eef5ff; }
+@media (min-width: 600px) {
+  .pulsar-topbar > span:last-child { display: block; }
+  .pulsar-hero { padding-top: 90px; padding-bottom: 120px; }
+  .pulsar-lighthouse { width: 560px; height: 560px; right: -140px; top: 0; opacity: .65; }
+  .pulsar-fact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulsar-section-heading { flex-direction: row; align-items: end; justify-content: space-between; gap: 40px; }
+  .pulsar-section-heading p { max-width: 250px; }
+}
+@media (min-width: 950px) {
+  .pulsar-hero { min-height: min(720px, 84svh); }
+  .pulsar-hero-copy { max-width: 60%; }
+  .pulsar-lighthouse { width: 680px; height: 680px; right: -25px; top: -25px; opacity: 1; }
+  .pulsar-model, .pulsar-facts { padding-top: 75px; padding-bottom: 65px; }
+  .pulsar-view { grid-template-columns: minmax(0, 1fr) 275px; }
+  .pulsar-viewport { height: 590px; }
+  .pulsar-panel { padding: 30px 24px; border-top: 0; border-left: 1px solid #4cc9f020; }
+  .pulsar-fact-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pulsar-fact { padding: 25px 20px; }
+  .pulsar-fact strong { font-size: clamp(34px, 3.4vw, 52px); }
+  .pulsar-fact strong small { font-size: 13px; }
+}
+@media (min-width: 1600px) {
+  .pulsar-topbar, .pulsar-hero, .pulsar-model, .pulsar-facts { padding-left: max(7%, calc((100% - 1400px) / 2)); padding-right: max(7%, calc((100% - 1400px) / 2)); }
+}
+@keyframes pulsar-beacon { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes pulsar-glow { 0%, 100% { box-shadow: 0 0 0 #4cc9f000; } 50% { box-shadow: 0 0 18px #4cc9f015, inset 0 0 12px #4cc9f006; } }
+@keyframes pulsar-stars { from { opacity: .35; transform: translateY(0); } to { opacity: .7; transform: translateY(6px); } }
+.pulsar-mount[data-motion-paused='true'] *, .pulsar-mount[data-motion-paused='true'] *::before { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { animation: none !important; scroll-behavior: auto !important; }
+  .pulsar-reveal { opacity: 1; transform: none; }
+}
+
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"}}
+  </script>
+</head>
+<body>
+  <main id="pulsar" class="pulsar-mount"><p class="standalone-loading">Preparando o pulsar 3D…</p></main>
+  <noscript>Ative o JavaScript para explorar a cena 3D.</noscript>
+  <!--
+    Ajustes: PULSAR_COLORS controla as cores; PULSAR_TURBULENCE controla
+    a amplitude das ondulações. beamWidth controla a abertura dos feixes.
+    Arquivo gerado por npm run export:pulsar. Fontes: Space Grotesk e Inter.
+    PULSAR_MODEL_URL em src/pulsar/landing.js permite substituir o modelo.
+  -->
+  <script>
+    window.addEventListener('error', function () {
+      var loading = document.querySelector('.standalone-loading');
+      if (loading) loading.textContent = 'Não foi possível carregar a cena. Verifique sua conexão para carregar a biblioteca Three.js e recarregue a página.';
+    }, true);
+  </script>
+  <script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+//#region \0rolldown/runtime.js
+var __defProp = Object.defineProperty;
+var __esmMin = (fn, res, err) => () => {
+	if (err) throw err[0];
+	try {
+		return fn && (res = fn(fn = 0)), res;
+	} catch (e) {
+		throw err = [e], e;
+	}
+};
+var __exportAll = (all, no_symbols) => {
+	let target = {};
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
+	return target;
+};
+//#endregion
+//#region src/pulsar/landing.js
+var PULSAR_HOTSPOTS = [
+	{
+		label: "Feixes de radiação",
+		position: [
+			0,
+			3.6,
+			0
+		],
+		space: "beam",
+		description: "Partem dos polos magnéticos e varrem o espaço enquanto a estrela gira."
+	},
+	{
+		label: "Eixo de rotação",
+		position: [
+			0,
+			1.1,
+			0
+		],
+		space: "world",
+		description: "A linha imaginária em torno da qual a estrela gira. Pode estar inclinada em relação aos polos magnéticos."
+	},
+	{
+		label: "Campo magnético",
+		position: [
+			1.35,
+			-1.1,
+			0
+		],
+		space: "beam",
+		description: "Um campo intenso que orienta partículas e a emissão de radiação perto dos polos."
+	}
+];
+var heroMarkup = `
+  <!-- 1. HERO: campo de estrelas e farol com pulso de dois segundos. -->
+  <header class="pulsar-topbar"><span class="pulsar-wordmark">pulsar<span aria-hidden="true">✳</span></span><span>Um encontro com o cosmos</span></header>
+  <section class="pulsar-hero" aria-labelledby="pulsar-title">
+    <div class="pulsar-stars" aria-hidden="true"></div>
+    <div class="pulsar-lighthouse" aria-hidden="true"><i></i><b></b><span></span></div>
+    <div class="pulsar-hero-copy">
+      <h1 id="pulsar-title">Pulsar: o farol do cosmos</h1>
+      <p>Uma estrela de nêutrons que gira centenas de vezes por segundo, emitindo feixes de radiação pelo espaço.</p>
+      <button type="button" class="pulsar-explore pulsar-glow">Explorar <span aria-hidden="true">↓</span></button>
+    </div>
+    <div class="pulsar-hero-foot"><span>Uma estrela. Dois feixes. Um sinal.</span><button type="button" class="pulsar-motion" aria-pressed="false">Pausar animações</button></div>
+  </section>
+  <!-- 2. MODELO 3D: a cena original, com controles e anotações projetadas. -->
+  <section class="pulsar-model pulsar-divider" id="pulsar-model" aria-labelledby="pulsar-model-title">
+    <div class="pulsar-section-heading pulsar-reveal"><h2 id="pulsar-model-title" tabindex="-1">Um farol em movimento.</h2><p>Explore a estrela por todos os ângulos.<br>A rotação está desacelerada para observação.</p></div>`;
+var closingMarkup = `
+  </section>
+  <!-- 3. DADOS E FECHAMENTO -->
+  <section class="pulsar-facts pulsar-divider" aria-labelledby="pulsar-facts-title">
+    <div class="pulsar-section-heading pulsar-reveal"><h2 id="pulsar-facts-title">Pequeno em tamanho.<br>Imenso em extremos.</h2><p>Os números de uma estrela de nêutrons.</p></div>
+    <div class="pulsar-fact-grid">
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~20 <small>km</small></strong><h3>de diâmetro</h3><p>~1,4 massa solar concentrada em uma esfera do tamanho de uma cidade.</p></article>
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>ms <span>→</span> s</strong><h3>por rotação</h3><p>Milissegundos a segundos. Cada volta pode trazer um novo pulso.</p></article>
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>1967</strong><h3>o primeiro sinal</h3><p>Descoberto em 1967 por Jocelyn Bell Burnell.</p></article>
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~30 <small>rotações/s</small></strong><h3>Pulsar do Caranguejo</h3><p>Um remanescente de supernova que continua marcando o tempo.</p></article>
+    </div>
+    <p class="pulsar-closing pulsar-reveal">No silêncio do espaço,<br>o universo tem seu próprio ritmo.</p>
+    <footer class="pulsar-footer"><span class="pulsar-wordmark">pulsar<span aria-hidden="true">✳</span></span><span>Uma janela para o universo.</span><button type="button" class="pulsar-top">Voltar ao topo ↑</button></footer>
+  </section>`;
+/** Observers and listeners belong to this mount and are released on close. */
+function mountLanding(host, { media, signal, onMotionChange }) {
+	if (!document.querySelector("#pulsar-fonts")) {
+		const fonts = document.createElement("link");
+		fonts.id = "pulsar-fonts";
+		fonts.rel = "stylesheet";
+		fonts.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap";
+		document.head.append(fonts);
+	}
+	const root = host.closest("dialog");
+	if (root) root.scrollTop = 0;
+	const scrollTo = (element) => {
+		element.scrollIntoView({
+			behavior: media.matches ? "instant" : "smooth",
+			block: "start"
+		});
+		element.focus({ preventScroll: true });
+	};
+	host.querySelector(".pulsar-explore").addEventListener("click", () => scrollTo(host.querySelector("#pulsar-model-title")), { signal });
+	host.querySelector(".pulsar-top").addEventListener("click", () => {
+		(root || window).scrollTo({
+			top: 0,
+			behavior: media.matches ? "instant" : "smooth"
+		});
+		host.querySelector(".pulsar-explore").focus({ preventScroll: true });
+	}, { signal });
+	const motionButton = host.querySelector(".pulsar-motion");
+	function setMotion(paused) {
+		host.dataset.motionPaused = String(paused);
+		motionButton.textContent = paused ? "Retomar animações" : "Pausar animações";
+		motionButton.setAttribute("aria-pressed", String(paused));
+	}
+	setMotion(media.matches);
+	motionButton.addEventListener("click", () => {
+		const paused = host.dataset.motionPaused !== "true";
+		setMotion(paused);
+		onMotionChange(paused);
+	}, { signal });
+	media.addEventListener("change", () => setMotion(media.matches), { signal });
+	const observer = new IntersectionObserver((entries) => {
+		for (const entry of entries) if (entry.isIntersecting) {
+			entry.target.classList.add("is-visible");
+			observer.unobserve(entry.target);
+		}
+	}, {
+		root,
+		threshold: .08
+	});
+	host.querySelectorAll(".pulsar-reveal").forEach((element) => observer.observe(element));
+	return () => observer.disconnect();
+}
+//#endregion
+//#region src/pulsar/shaders.js
+var noiseGLSL, flowGLSL, beamVertexShader, beamFragmentShader, filamentVertexShader, filamentFragmentShader, particleVertexShader, particleFragmentShader, billboardVertexShader, haloFragmentShader, nebulaFragmentShader, backgroundVertexShader, backgroundFragmentShader, finishingShader;
+var init_shaders = __esmMin((() => {
+	noiseGLSL = `
+  float hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+  }
+  float noise3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash31(i), hash31(i + vec3(1,0,0)), f.x),
+          mix(hash31(i + vec3(0,1,0)), hash31(i + vec3(1,1,0)), f.x), f.y),
+      mix(mix(hash31(i + vec3(0,0,1)), hash31(i + vec3(1,0,1)), f.x),
+          mix(hash31(i + vec3(0,1,1)), hash31(i + vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p) {
+    float n = 0.0, amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      n += amplitude * noise3(p);
+      p = p * 2.03 + vec3(13.1, 7.7, 9.2);
+      amplitude *= 0.5;
+    }
+    return n;
+  }
+`;
+	flowGLSL = `
+  vec3 plasmaCenter(float t, float direction) {
+    float envelope = pow(t, 2.7) * uTurbulence;
+    float turn = t * 8.5 - uTime * 0.58;
+    float n = noise3(vec3(t * 5.0, uTime * 0.14, 2.7)) - 0.5;
+    return direction * vec3(
+      envelope * (sin(turn) * 0.72 + n * 0.8),
+      t * uLength,
+      envelope * (cos(turn * 0.81) * 0.56 + n * 0.6)
+    );
+  }
+  vec3 facingRight(vec3 center, float direction) {
+    vec3 axis = normalize((modelViewMatrix * vec4(0.0, direction, 0.0, 0.0)).xyz);
+    vec3 across = cross(axis, normalize(-center));
+    return normalize(across + vec3(0.00001, 0.0, 0.0));
+  }
+`;
+	beamVertexShader = `
+  uniform float uTime, uLength, uWidth, uTurbulence;
+  attribute float aDirection;
+  varying vec2 vUv;
+  ${noiseGLSL}
+  ${flowGLSL}
+  void main() {
+    vUv = uv;
+    float t = uv.y;
+    float spread = (0.016 + pow(t, 1.24) * 0.63) * uWidth;
+    float eddy = noise3(vec3(t * 11.0, uv.x * 3.0, uTime * 0.23));
+    spread *= 0.88 + eddy * 0.27 * smoothstep(0.12, 0.95, t);
+    vec3 center = (modelViewMatrix * vec4(plasmaCenter(t, aDirection), 1.0)).xyz;
+    center += facingRight(center, aDirection) * position.x * spread;
+    gl_Position = projectionMatrix * vec4(center, 1.0);
+  }
+`;
+	beamFragmentShader = `
+  uniform float uTime, uPulse;
+  uniform vec3 uBeamColor, uDeepColor, uCoreColor;
+  varying vec2 vUv;
+  ${noiseGLSL}
+  void main() {
+    float t = vUv.y;
+    float radial = abs(vUv.x * 2.0 - 1.0);
+    float turbulence = fbm(vec3(vUv.x * 5.7, t * 15.0 - uTime * 0.7, uTime * 0.12));
+    float outer = exp(-radial * radial * 4.8);
+    float inner = exp(-radial * radial * 31.0);
+    float spine = exp(-radial * radial * 680.0);
+    float edge = 1.0 - smoothstep(0.72, 1.0, radial);
+    float tail = 1.0 - smoothstep(0.60, 1.0, t);
+    float density = mix(1.0, 0.38 + turbulence * 1.1, smoothstep(0.12, 0.9, t));
+    float threads = pow(max(0.0, sin(vUv.x * 42.0 + turbulence * 7.0 - t * 8.0)), 7.0);
+    vec3 color = uDeepColor * outer * 0.21;
+    color += uBeamColor * (outer * 0.24 + inner * 0.29 + threads * outer * t * 0.10);
+    color += uCoreColor * spine * (1.12 - t * 0.82);
+    color *= density * tail * edge * uPulse;
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+	filamentVertexShader = `
+  uniform float uTime, uLength, uWidth, uTurbulence;
+  attribute float aDirection, aFilament;
+  varying vec2 vUv;
+  varying float vFilament;
+  ${noiseGLSL}
+  ${flowGLSL}
+  void main() {
+    vUv = uv;
+    vFilament = aFilament;
+    float t = mix(0.25, 1.0, uv.y);
+    float id = aFilament;
+    float wave = t * (8.0 + id * 0.36) - uTime * (0.33 + id * 0.027) + id * 2.4;
+    float envelope = pow(t, 1.65) * (0.12 + id * 0.060) * uWidth;
+    float eddy = fbm(vec3(t * 12.0, id * 2.8, uTime * 0.18)) - 0.5;
+    vec3 flow = plasmaCenter(t, aDirection);
+    flow.x += aDirection * (sin(wave) + eddy * uTurbulence * 2.1) * envelope;
+    flow.z += aDirection * cos(wave * 0.79) * envelope;
+    vec3 center = (modelViewMatrix * vec4(flow, 1.0)).xyz;
+    float ribbonWidth = (0.012 + t * 0.045) * (0.72 + id * 0.11) * uWidth;
+    center += facingRight(center, aDirection) * position.x * ribbonWidth;
+    gl_Position = projectionMatrix * vec4(center, 1.0);
+  }
+`;
+	filamentFragmentShader = `
+  uniform float uTime;
+  uniform vec3 uBeamColor, uCoreColor;
+  varying vec2 vUv;
+  varying float vFilament;
+  ${noiseGLSL}
+  void main() {
+    float radial = abs(vUv.x * 2.0 - 1.0);
+    float profile = exp(-radial * radial * 5.2) * (1.0 - smoothstep(0.64, 1.0, radial));
+    float envelope = smoothstep(0.0, 0.27, vUv.y) * (1.0 - smoothstep(0.54, 1.0, vUv.y));
+    float noise = fbm(vec3(vUv.y * 21.0 - uTime * 0.82, vFilament * 3.5, uTime * 0.2));
+    vec3 color = mix(uBeamColor, uCoreColor, 0.16) * profile * envelope * noise * 0.62;
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+	particleVertexShader = `
+  uniform float uTime, uLength, uWidth, uTurbulence, uPixelRatio;
+  attribute vec4 aSeed;
+  attribute float aDirection;
+  varying float vOpacity;
+  ${noiseGLSL}
+  ${flowGLSL}
+  void main() {
+    float age = fract(aSeed.x + uTime * (0.10 + aSeed.w * 0.07));
+    // Quadratic distance gives a visibly accelerating outward flow.
+    float t = age * age;
+    float angle = aSeed.z * 6.283185 + t * 5.0 - uTime * 0.15;
+    float radius = sqrt(aSeed.y) * (0.012 + pow(t, 1.30) * 0.53) * uWidth;
+    vec3 flow = plasmaCenter(t, aDirection);
+    flow += aDirection * vec3(cos(angle) * radius, 0.0, sin(angle) * radius);
+    vec4 viewPosition = modelViewMatrix * vec4(flow, 1.0);
+    gl_Position = projectionMatrix * viewPosition;
+    gl_PointSize = clamp((27.0 / max(1.0, -viewPosition.z)) * uPixelRatio *
+      mix(1.7, 0.48, t) * (0.75 + aSeed.w), 0.55, 6.0 * uPixelRatio);
+    vOpacity = smoothstep(0.0, 0.018, t) * pow(1.0 - t, 1.55) * (0.10 + aSeed.w * 0.29);
+  }
+`;
+	particleFragmentShader = `
+  uniform vec3 uCoreColor;
+  varying float vOpacity;
+  void main() {
+    float radius = length(gl_PointCoord - 0.5) * 2.0;
+    float light = exp(-radius * radius * 4.5) * (1.0 - smoothstep(0.75, 1.0, radius));
+    gl_FragColor = vec4(uCoreColor * light * vOpacity, 1.0);
+  }
+`;
+	billboardVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+	haloFragmentShader = `
+  uniform float uPulse;
+  uniform vec3 uCoreColor, uHaloColor;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float r = length(p);
+    float core = exp(-r * r * 2100.0) * 5.0;
+    float glow = exp(-r * 17.0) * 1.1 + exp(-r * 7.4) * 0.064;
+    float flare = exp(-abs(p.x) * 12.0 - abs(p.y) * 280.0)
+                + exp(-abs(p.y) * 13.0 - abs(p.x) * 320.0);
+    vec3 light = uCoreColor * (core + flare * 0.26) + uHaloColor * glow;
+    gl_FragColor = vec4(light * uPulse * (1.0 - smoothstep(0.75, 1.0, r)), 1.0);
+  }
+`;
+	nebulaFragmentShader = `
+  uniform float uTime, uOpacity;
+  uniform vec3 uColor;
+  uniform float uMist;
+  varying vec2 vUv;
+  ${noiseGLSL}
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float envelope = exp(-dot(p * vec2(1.1, 0.86), p * vec2(1.1, 0.86)) * 3.4);
+    float cloud = fbm(vec3(p * 3.2, uTime * 0.009));
+    float detail = fbm(vec3(p * 7.2 + cloud * 2.4, 4.9 + uTime * 0.012));
+    float density = smoothstep(0.20, 0.78, cloud * 0.55 + detail * 0.65);
+    float light = envelope * density * uOpacity;
+    light *= mix(1.0, exp(-abs(p.x) * 1.8), uMist);
+    gl_FragColor = vec4(uColor * light, 1.0);
+  }
+`;
+	backgroundVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.99999, 1.0);
+  }
+`;
+	backgroundFragmentShader = `
+  varying vec2 vUv;
+  void main() {
+    float falloff = exp(-length((vUv - vec2(0.50, 0.56)) * vec2(1.0, 0.75)) * 2.5);
+    gl_FragColor = vec4(vec3(0.0010, 0.0024, 0.0068) * falloff, 1.0);
+  }
+`;
+	finishingShader = {
+		uniforms: {
+			tDiffuse: { value: null },
+			uTime: { value: 0 },
+			uTransparent: { value: 0 }
+		},
+		vertexShader: billboardVertexShader,
+		fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime, uTransparent;
+    varying vec2 vUv;
+    void main() {
+      vec3 color = texture2D(tDiffuse, vUv).rgb;
+      vec2 p = (vUv - 0.5) * 2.0;
+      float vignette = 1.0 - smoothstep(0.25, 1.60, dot(p, p)) * 0.24;
+      float grain = fract(sin(dot(gl_FragCoord.xy + floor(uTime * 24.0), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+      color = color * vignette + grain * 0.005;
+      color = max(color, vec3(0.0));
+      // Reconstruct an alpha mask after bloom so its glow blends with the page.
+      float alpha = mix(1.0, clamp(max(color.r, max(color.g, color.b)) * 1.5, 0.0, 1.0), uTransparent);
+      gl_FragColor = vec4(color / max(alpha, 0.0001), alpha);
+    }
+  `
+	};
+}));
+//#endregion
+//#region src/pulsar/createPulsarScene.js
+var createPulsarScene_exports = /* @__PURE__ */ __exportAll({
+	PULSAR_COLORS: () => PULSAR_COLORS,
+	PULSAR_TURBULENCE: () => PULSAR_TURBULENCE,
+	createBeam: () => createBeam,
+	createNebula: () => createNebula,
+	createPulsarScene: () => createPulsarScene,
+	createStar: () => createStar,
+	createStarfield: () => createStarfield,
+	setupPostProcessing: () => setupPostProcessing
+});
+function additiveMaterial(parameters) {
+	return new THREE.ShaderMaterial({
+		transparent: true,
+		blending: THREE.AdditiveBlending,
+		depthWrite: false,
+		depthTest: false,
+		side: THREE.DoubleSide,
+		toneMapped: false,
+		...parameters
+	});
+}
+function seededRandom(seed = 2047) {
+	return () => {
+		seed = seed * 1664525 + 1013904223 >>> 0;
+		return seed / 4294967296;
+	};
+}
+function sanitizeSettings(previous, partial) {
+	const next = { ...previous };
+	const bounds = {
+		rotationSpeed: [0, 3],
+		inclination: [0, 40],
+		bloom: [0, 3],
+		beamWidth: [.35, 2.5],
+		particleCount: [0, MAX_PARTICLES]
+	};
+	for (const [key, [min, max]] of Object.entries(bounds)) if (partial[key] !== void 0 && Number.isFinite(Number(partial[key]))) next[key] = THREE.MathUtils.clamp(Number(partial[key]), min, max);
+	next.particleCount = Math.round(next.particleCount);
+	return next;
+}
+function createStar(uniforms) {
+	const group = new THREE.Group();
+	const material = new THREE.MeshBasicMaterial({
+		color: new THREE.Color(PULSAR_COLORS.core).multiplyScalar(6),
+		toneMapped: false
+	});
+	const core = new THREE.Mesh(new THREE.SphereGeometry(.054, 20, 12), material);
+	const halo = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), additiveMaterial({
+		uniforms,
+		vertexShader: billboardVertexShader,
+		fragmentShader: haloFragmentShader
+	}));
+	halo.renderOrder = 8;
+	group.add(core, halo);
+	return {
+		group,
+		core,
+		halo
+	};
+}
+function createStripGeometry(strips, segments, columns = 8) {
+	const positions = [], uvs = [], directions = [], filaments = [], indices = [];
+	for (let strip = 0; strip < strips; strip++) {
+		const offset = positions.length / 3;
+		for (let row = 0; row <= segments; row++) for (let column = 0; column <= columns; column++) {
+			positions.push(column / columns * 2 - 1, row / segments, 0);
+			uvs.push(column / columns, row / segments);
+			directions.push(strip % 2 === 0 ? 1 : -1);
+			filaments.push(Math.floor(strip / 2));
+		}
+		for (let row = 0; row < segments; row++) for (let column = 0; column < columns; column++) {
+			const a = offset + row * (columns + 1) + column;
+			const b = a + columns + 1;
+			indices.push(a, b, a + 1, b, b + 1, a + 1);
+		}
+	}
+	const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+	geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+	geometry.setAttribute("aDirection", new THREE.Float32BufferAttribute(directions, 1));
+	geometry.setAttribute("aFilament", new THREE.Float32BufferAttribute(filaments, 1));
+	geometry.setIndex(indices);
+	return geometry;
+}
+function createBeam(uniforms, particleCount) {
+	const group = new THREE.Group();
+	const volume = new THREE.Mesh(createStripGeometry(2, 86, 20), additiveMaterial({
+		uniforms,
+		vertexShader: beamVertexShader,
+		fragmentShader: beamFragmentShader
+	}));
+	const filaments = new THREE.Mesh(createStripGeometry(14, 72, 4), additiveMaterial({
+		uniforms,
+		vertexShader: filamentVertexShader,
+		fragmentShader: filamentFragmentShader
+	}));
+	volume.frustumCulled = false;
+	filaments.frustumCulled = false;
+	volume.renderOrder = 3;
+	filaments.renderOrder = 4;
+	const random = seededRandom(1337);
+	const seeds = new Float32Array(MAX_PARTICLES * 4);
+	const directions = new Float32Array(MAX_PARTICLES);
+	for (let i = 0; i < MAX_PARTICLES; i++) {
+		directions[i] = i % 2 === 0 ? 1 : -1;
+		for (let channel = 0; channel < 4; channel++) seeds[i * 4 + channel] = random();
+	}
+	const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3));
+	geometry.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 4));
+	geometry.setAttribute("aDirection", new THREE.BufferAttribute(directions, 1));
+	geometry.setDrawRange(0, particleCount);
+	const particles = new THREE.Points(geometry, additiveMaterial({
+		uniforms,
+		vertexShader: particleVertexShader,
+		fragmentShader: particleFragmentShader
+	}));
+	particles.frustumCulled = false;
+	particles.renderOrder = 5;
+	group.add(volume, filaments, particles);
+	return {
+		group,
+		particles
+	};
+}
+function createStarfield(uniforms) {
+	const random = seededRandom(9041);
+	const positions = [], colors = [], sizes = [], phases = [];
+	for (let i = 0; i < 650; i++) {
+		const azimuth = random() * Math.PI * 2;
+		const cosine = random() * 2 - 1;
+		const sine = Math.sqrt(1 - cosine * cosine);
+		const distance = 31 + random() * 36;
+		positions.push(Math.cos(azimuth) * sine * distance, cosine * distance, Math.sin(azimuth) * sine * distance);
+		const blue = random() > .58;
+		const brightness = .26 + Math.pow(random(), 3) * 1;
+		colors.push(brightness * (blue ? .57 : .96), brightness * (blue ? .74 : .98), brightness);
+		sizes.push(.8 + Math.pow(random(), 4) * 1.65);
+		phases.push(random() * Math.PI * 2);
+	}
+	const geometry = new THREE.BufferGeometry();
+	geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+	geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+	geometry.setAttribute("aSize", new THREE.Float32BufferAttribute(sizes, 1));
+	geometry.setAttribute("aPhase", new THREE.Float32BufferAttribute(phases, 1));
+	const stars = new THREE.Points(geometry, additiveMaterial({
+		uniforms,
+		vertexShader: `
+      uniform float uTime, uPixelRatio;
+      attribute vec3 color;
+      attribute float aSize, aPhase;
+      varying vec3 vColor;
+      void main() {
+        vColor = color * (0.94 + sin(uTime * 0.31 + aPhase) * 0.06);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = aSize * uPixelRatio;
+      }
+    `,
+		fragmentShader: `
+      varying vec3 vColor;
+      void main() {
+        float r = length(gl_PointCoord - 0.5) * 2.0;
+        gl_FragColor = vec4(vColor * exp(-r * r * 3.8), 1.0);
+      }
+    `
+	}));
+	stars.renderOrder = 0;
+	return stars;
+}
+function createNebula(uniforms) {
+	function cloud(color, opacity, mist, size, x, y, z) {
+		const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), additiveMaterial({
+			uniforms: {
+				uTime: uniforms.uTime,
+				uColor: { value: new THREE.Color(color) },
+				uOpacity: { value: opacity },
+				uMist: { value: mist }
+			},
+			vertexShader: billboardVertexShader,
+			fragmentShader: nebulaFragmentShader
+		}));
+		mesh.position.set(x, y, z);
+		mesh.renderOrder = -1;
+		return mesh;
+	}
+	return [cloud(PULSAR_COLORS.dust, .44, 0, 27, -7.5, 1, -9), cloud(PULSAR_COLORS.mist, .23, 1, 15, 0, 0, -4)];
+}
+function setupPostProcessing(renderer, scene, camera, settings) {
+	const composer = new EffectComposer(renderer);
+	const render = new RenderPass(scene, camera);
+	const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), settings.bloom, .6, .1);
+	const output = new OutputPass();
+	const finishing = new ShaderPass(finishingShader);
+	composer.addPass(render);
+	composer.addPass(bloom);
+	composer.addPass(output);
+	composer.addPass(finishing);
+	return {
+		composer,
+		bloom,
+		finishing,
+		passes: [
+			render,
+			bloom,
+			output,
+			finishing
+		]
+	};
+}
+function createPulsarScene(container, options = {}) {
+	let settings = sanitizeSettings(DEFAULT_SETTINGS$1, options.settings || {});
+	let paused = Boolean(options.paused);
+	let disposed = false, failed = false, ready = false;
+	let inView = true, frame = 0, lastNow = 0, time = 0, spin = 0;
+	let datasetTime = -1, adaptationFrames = 0, frameCost = 0;
+	let width = 1, height = 1;
+	let pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+	const scene = new THREE.Scene();
+	const camera = new THREE.PerspectiveCamera(40, 1, .1, 140);
+	const initialPosition = new THREE.Vector3(.25, .08, 19.2);
+	camera.position.copy(initialPosition);
+	const renderer = new THREE.WebGLRenderer({
+		antialias: false,
+		alpha: true,
+		premultipliedAlpha: false,
+		powerPreference: "high-performance"
+	});
+	renderer.setPixelRatio(pixelRatio);
+	renderer.setClearColor(0, options.transparent ? 0 : 1);
+	renderer.outputColorSpace = THREE.SRGBColorSpace;
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	renderer.toneMappingExposure = 1.2;
+	renderer.info.autoReset = false;
+	const canvas = renderer.domElement;
+	canvas.style.cssText = "display:block;width:100%;height:100%;touch-action:none;";
+	canvas.tabIndex = 0;
+	canvas.setAttribute("aria-label", "Modelo 3D interativo de um pulsar. Arraste para orbitar, use a roda ou mais e menos para aproximar e as setas para mover a câmera.");
+	canvas.dataset.ready = "false";
+	canvas.dataset.time = "0.000";
+	container.appendChild(canvas);
+	const controls = new OrbitControls(camera, canvas);
+	controls.enableDamping = true;
+	controls.autoRotate = Boolean(options.autoRotate) && !paused;
+	controls.autoRotateSpeed = .35;
+	controls.dampingFactor = .065;
+	controls.rotateSpeed = .45;
+	controls.zoomSpeed = .65;
+	controls.panSpeed = .6;
+	controls.minDistance = 8;
+	controls.maxDistance = 38;
+	controls.maxTargetRadius = 10;
+	controls.listenToKeyEvents(canvas);
+	controls.target.set(0, 0, 0);
+	controls.update();
+	controls.saveState();
+	const uniforms = {
+		uTime: { value: 0 },
+		uPulse: { value: 1 },
+		uLength: { value: BEAM_LENGTH },
+		uWidth: { value: settings.beamWidth },
+		uTurbulence: { value: PULSAR_TURBULENCE },
+		uPixelRatio: { value: pixelRatio },
+		uCoreColor: { value: new THREE.Color(PULSAR_COLORS.core) },
+		uHaloColor: { value: new THREE.Color(PULSAR_COLORS.halo) },
+		uBeamColor: { value: new THREE.Color(PULSAR_COLORS.beam) },
+		uDeepColor: { value: new THREE.Color(PULSAR_COLORS.deepBeam) }
+	};
+	const background = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+		vertexShader: backgroundVertexShader,
+		fragmentShader: backgroundFragmentShader,
+		depthTest: false,
+		depthWrite: false
+	}));
+	background.frustumCulled = false;
+	background.renderOrder = -100;
+	const star = createStar(uniforms);
+	const beams = createBeam(uniforms, settings.particleCount);
+	const spinGroup = new THREE.Group();
+	spinGroup.add(beams.group);
+	const nebulae = createNebula(uniforms);
+	scene.add(background, createStarfield(uniforms), ...nebulae, star.group, spinGroup);
+	if (options.transparent) {
+		background.visible = false;
+		nebulae.forEach((nebula) => {
+			nebula.visible = false;
+		});
+		scene.children.find((object) => object.isPoints).visible = false;
+	}
+	scene.add(new THREE.HemisphereLight(12577535, 4072287, 2));
+	const softLight = new THREE.DirectionalLight(14349823, 2.4);
+	softLight.position.set(4, 6, 5);
+	scene.add(softLight);
+	const { composer, bloom, finishing, passes } = setupPostProcessing(renderer, scene, camera, settings);
+	finishing.uniforms.uTransparent.value = options.transparent ? 1 : 0;
+	let modelLoaded = !options.modelUrl;
+	function disposeObject(object) {
+		object.traverse((child) => {
+			child.geometry?.dispose();
+			const materials = child.material ? Array.isArray(child.material) ? child.material : [child.material] : [];
+			for (const material of materials) {
+				for (const value of Object.values(material)) if (value?.isTexture) value.dispose();
+				material.dispose();
+			}
+		});
+	}
+	if (options.modelUrl) import("three/addons/loaders/GLTFLoader.js").then(({ GLTFLoader }) => new GLTFLoader().loadAsync(options.modelUrl)).then((gltf) => {
+		if (disposed || failed) {
+			disposeObject(gltf.scene);
+			return;
+		}
+		const box = new THREE.Box3().setFromObject(gltf.scene);
+		const size = box.getSize(new THREE.Vector3());
+		const scale = 11 / Math.max(size.x, size.y, size.z, .001);
+		const center = box.getCenter(new THREE.Vector3());
+		gltf.scene.scale.setScalar(scale);
+		gltf.scene.position.copy(center).multiplyScalar(-scale);
+		const normalized = new THREE.Group();
+		normalized.add(gltf.scene);
+		spinGroup.add(normalized);
+		star.group.visible = false;
+		beams.group.visible = false;
+		modelLoaded = true;
+		requestRender();
+	}).catch(reportError);
+	const hotspotPoints = (options.hotspots || []).map((hotspot) => ({
+		...hotspot,
+		point: new THREE.Vector3(...hotspot.position)
+	}));
+	const projected = new THREE.Vector3();
+	function reportError(error) {
+		if (disposed || failed) return;
+		failed = true;
+		cancelAnimationFrame(frame);
+		frame = 0;
+		canvas.dataset.ready = "false";
+		options.onError?.(error);
+	}
+	renderer.debug.onShaderError = (gl, program) => {
+		reportError(/* @__PURE__ */ new Error(`Não foi possível compilar o visual 3D: ${gl.getProgramInfoLog(program) || "shader indisponível"}`));
+	};
+	function requestRender() {
+		if (!disposed && !failed && !document.hidden && inView && !frame) frame = requestAnimationFrame(animate);
+	}
+	function updateUniforms() {
+		uniforms.uTime.value = time;
+		uniforms.uPulse.value = 1 + Math.sin(spin * 2) * .065;
+		uniforms.uWidth.value = settings.beamWidth;
+		spinGroup.rotation.set(0, spin, Math.sin(time * .11) * .016);
+		beams.group.rotation.z = -THREE.MathUtils.degToRad(settings.inclination + Math.sin(time * .14) * 1);
+		star.core.scale.setScalar(1 + Math.sin(spin * 2) * .02);
+		star.halo.quaternion.copy(camera.quaternion);
+		for (const nebula of nebulae) nebula.quaternion.copy(camera.quaternion);
+		finishing.uniforms.uTime.value = time;
+	}
+	function animate(now) {
+		frame = 0;
+		if (disposed || failed || document.hidden || !inView) return;
+		const delta = lastNow ? Math.min((now - lastNow) / 1e3, .06) : 0;
+		lastNow = now;
+		if (!paused) {
+			time += delta;
+			spin += delta * settings.rotationSpeed;
+		}
+		const controlsChanged = controls.update(delta);
+		updateUniforms();
+		scene.updateMatrixWorld(true);
+		camera.updateMatrixWorld(true);
+		options.onHotspots?.(hotspotPoints.map((hotspot) => {
+			projected.copy(hotspot.point);
+			if (hotspot.space === "beam") beams.group.localToWorld(projected);
+			projected.project(camera);
+			return {
+				x: (projected.x + 1) * width / 2,
+				y: (1 - projected.y) * height / 2,
+				visible: modelLoaded && projected.z > -1 && projected.z < 1 && Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1
+			};
+		}));
+		renderer.info.reset();
+		try {
+			composer.render(delta);
+		} catch (error) {
+			reportError(error);
+			return;
+		}
+		if (failed || disposed) return;
+		if (!ready && modelLoaded) {
+			ready = true;
+			canvas.dataset.ready = "true";
+			options.onReady?.();
+		}
+		if (paused || time - datasetTime >= .2) {
+			canvas.dataset.time = time.toFixed(3);
+			datasetTime = time;
+		}
+		if (!paused && delta > 0) {
+			frameCost += delta;
+			adaptationFrames++;
+			if (adaptationFrames >= 180) {
+				if (frameCost / adaptationFrames > .027 && pixelRatio > 1) {
+					pixelRatio = Math.max(1, pixelRatio - .2);
+					renderer.setPixelRatio(pixelRatio);
+					composer.setPixelRatio(pixelRatio);
+					uniforms.uPixelRatio.value = pixelRatio;
+				}
+				frameCost = 0;
+				adaptationFrames = 0;
+			}
+		}
+		if (!paused || controlsChanged) requestRender();
+	}
+	function resize() {
+		if (disposed) return;
+		const rect = container.getBoundingClientRect();
+		width = Math.max(1, Math.round(rect.width));
+		height = Math.max(1, Math.round(rect.height));
+		camera.aspect = width / height;
+		camera.updateProjectionMatrix();
+		renderer.setSize(width, height, false);
+		composer.setSize(width, height);
+		requestRender();
+	}
+	function visibilityChanged() {
+		lastNow = 0;
+		if (document.hidden || !inView) {
+			cancelAnimationFrame(frame);
+			frame = 0;
+		} else requestRender();
+	}
+	function contextLost(event) {
+		event.preventDefault();
+		reportError(/* @__PURE__ */ new Error("O contexto WebGL foi interrompido. Recarregue a visualização para continuar."));
+	}
+	function focusCanvas() {
+		canvas.focus({ preventScroll: true });
+	}
+	function zoomWithKeyboard(event) {
+		if (event.altKey || event.ctrlKey || event.metaKey) return;
+		if (event.key === "+" || event.key === "=" || event.code === "NumpadAdd") {
+			event.preventDefault();
+			controls.dollyIn(.93);
+		} else if (event.key === "-" || event.key === "_" || event.code === "NumpadSubtract") {
+			event.preventDefault();
+			controls.dollyOut(.93);
+		}
+	}
+	controls.addEventListener("change", requestRender);
+	controls.addEventListener("start", requestRender);
+	canvas.addEventListener("pointerdown", focusCanvas);
+	canvas.addEventListener("keydown", zoomWithKeyboard);
+	canvas.addEventListener("webglcontextlost", contextLost);
+	document.addEventListener("visibilitychange", visibilityChanged);
+	const resizeObserver = new ResizeObserver(resize);
+	resizeObserver.observe(container);
+	const intersectionObserver = new IntersectionObserver(([entry]) => {
+		inView = entry.isIntersecting;
+		visibilityChanged();
+	}, { rootMargin: "80px" });
+	intersectionObserver.observe(container);
+	resize();
+	return {
+		setSettings(partial) {
+			if (disposed) return;
+			settings = sanitizeSettings(settings, partial);
+			bloom.strength = settings.bloom;
+			beams.particles.geometry.setDrawRange(0, settings.particleCount);
+			requestRender();
+		},
+		setPaused(value) {
+			if (disposed) return;
+			paused = Boolean(value);
+			controls.autoRotate = Boolean(options.autoRotate) && !paused;
+			lastNow = 0;
+			canvas.dataset.time = time.toFixed(3);
+			requestRender();
+		},
+		resetCamera() {
+			if (disposed) return;
+			controls.enableDamping = false;
+			controls.update();
+			controls.reset();
+			controls.target.set(0, 0, 0);
+			camera.position.copy(initialPosition);
+			camera.zoom = 1;
+			camera.updateProjectionMatrix();
+			controls.update();
+			controls.enableDamping = true;
+			requestRender();
+		},
+		getState() {
+			return {
+				paused,
+				ready,
+				disposed,
+				failed,
+				settings: { ...settings },
+				time,
+				camera: camera.position.toArray(),
+				target: controls.target.toArray(),
+				particleCount: beams.particles.geometry.drawRange.count,
+				drawCalls: renderer.info.render.calls,
+				pixelRatio,
+				width,
+				height
+			};
+		},
+		dispose() {
+			if (disposed) return;
+			disposed = true;
+			cancelAnimationFrame(frame);
+			resizeObserver.disconnect();
+			intersectionObserver.disconnect();
+			document.removeEventListener("visibilitychange", visibilityChanged);
+			canvas.removeEventListener("webglcontextlost", contextLost);
+			canvas.removeEventListener("pointerdown", focusCanvas);
+			canvas.removeEventListener("keydown", zoomWithKeyboard);
+			controls.removeEventListener("change", requestRender);
+			controls.removeEventListener("start", requestRender);
+			controls.dispose();
+			disposeObject(scene);
+			for (const pass of passes) pass.dispose?.();
+			composer.dispose();
+			renderer.dispose();
+			renderer.forceContextLoss();
+			canvas.remove();
+		}
+	};
+}
+var PULSAR_COLORS, PULSAR_TURBULENCE, MAX_PARTICLES, BEAM_LENGTH, DEFAULT_SETTINGS$1;
+var init_createPulsarScene = __esmMin((() => {
+	init_shaders();
+	PULSAR_COLORS = Object.freeze({
+		core: "#BFE6FF",
+		halo: "#2A7BFF",
+		beam: "#1F6BFF",
+		deepBeam: "#0B2A8A",
+		dust: "#3A2A14",
+		mist: "#16417E"
+	});
+	PULSAR_TURBULENCE = .58;
+	MAX_PARTICLES = 4e3;
+	BEAM_LENGTH = 6.3;
+	DEFAULT_SETTINGS$1 = Object.freeze({
+		rotationSpeed: .7,
+		inclination: 13,
+		bloom: 1.2,
+		beamWidth: 1,
+		particleCount: 1400
+	});
+}));
+//#endregion
+//#region src/pulsar/mountPulsar.js
+var DEFAULT_SETTINGS = Object.freeze({
+	rotationSpeed: .7,
+	inclination: 13,
+	bloom: 1.2,
+	beamWidth: 1,
+	particleCount: 1400
+});
+var copy = {
+	pt: {
+		type: "Estrela de nêutrons",
+		description: "Um farol cósmico. Dois feixes de radiação percorrem o espaço a cada rotação.",
+		controls: "Ajustar o pulsar",
+		rotationSpeed: "Velocidade de rotação",
+		inclination: "Inclinação do feixe",
+		bloom: "Intensidade do bloom",
+		beamWidth: "Largura dos feixes",
+		particleCount: "Quantidade de partículas",
+		pause: "Pausar",
+		play: "Retomar",
+		reset: "Resetar câmera",
+		live: "Em rotação",
+		paused: "Pausado",
+		desktop: "Arraste para orbitar. Role para aproximar.",
+		touch: "Arraste para orbitar. Use dois dedos para zoom e pan.",
+		keyboard: "Com a cena em foco, use as setas para mover e + / − para zoom. Shift + arraste move a câmera.",
+		about: "Por que ele pulsa?",
+		explanation: "Quando um dos polos magnéticos aponta para a Terra, detectamos um pulso. O núcleo é uma estrela de nêutrons: o remanescente denso de uma estrela massiva. Aqui, a rotação está desacelerada para você observar os feixes.",
+		loading: "Preparando a cena…",
+		error: "A cena 3D não pôde ser iniciada. Verifique se a aceleração gráfica está habilitada no navegador.",
+		retry: "Tentar novamente",
+		scene: "Pulsar 3D interativo com dois feixes azuis opostos"
+	},
+	en: {
+		type: "Neutron star",
+		description: "A cosmic lighthouse. Two beams of radiation sweep through space with every rotation.",
+		controls: "Adjust the pulsar",
+		rotationSpeed: "Rotation speed",
+		inclination: "Beam inclination",
+		bloom: "Bloom intensity",
+		beamWidth: "Beam width",
+		particleCount: "Particle count",
+		pause: "Pause",
+		play: "Resume",
+		reset: "Reset camera",
+		live: "Rotating",
+		paused: "Paused",
+		desktop: "Drag to orbit. Scroll to zoom.",
+		touch: "Drag to orbit. Use two fingers to zoom and pan.",
+		keyboard: "Focus the scene and use arrow keys to pan, + / − to zoom. Shift + drag also pans.",
+		about: "Why does it pulse?",
+		explanation: "When a magnetic pole points toward Earth, we detect a pulse. The core is a neutron star: the dense remnant of a massive star. The rotation is slowed here so you can observe the beams.",
+		loading: "Preparing the scene…",
+		error: "The 3D scene could not start. Check that graphics acceleration is enabled in your browser.",
+		retry: "Try again",
+		scene: "Interactive 3D pulsar with two opposing blue beams"
+	}
+};
+var ranges = [
+	{
+		key: "rotationSpeed",
+		min: 0,
+		max: 2,
+		step: .05,
+		unit: "×"
+	},
+	{
+		key: "inclination",
+		min: 0,
+		max: 35,
+		step: 1,
+		unit: "°"
+	},
+	{
+		key: "bloom",
+		min: 0,
+		max: 2.5,
+		step: .05,
+		unit: ""
+	},
+	{
+		key: "beamWidth",
+		min: .4,
+		max: 2,
+		step: .05,
+		unit: "×"
+	},
+	{
+		key: "particleCount",
+		min: 0,
+		max: 4e3,
+		step: 100,
+		unit: ""
+	}
+];
+var icon = (name) => {
+	return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${{
+		pause: "<path d=\"M8 5v14M16 5v14\"/>",
+		play: "<path d=\"m8 5 11 7-11 7Z\"/>",
+		reset: "<path d=\"M4 10a8 8 0 1 1 1.4 7M4 4v6h6\"/>"
+	}[name]}</svg>`;
+};
+/** No saved preferences: every visit starts with the same camera and settings. */
+function mountPulsar(host) {
+	const lang = "pt";
+	host.lang = "pt-BR";
+	const t = copy[lang] || copy.pt;
+	const settings = { ...DEFAULT_SETTINGS };
+	const media = matchMedia("(prefers-reduced-motion: reduce)");
+	const coarse = matchMedia("(pointer: coarse)");
+	const listeners = new AbortController();
+	let paused = media.matches;
+	let controller = null;
+	let disposed = false;
+	let attempt = 0;
+	const format = (value, range) => new Intl.NumberFormat("pt-BR", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: [
+			"bloom",
+			"beamWidth",
+			"rotationSpeed"
+		].includes(range.key) ? 1 : 0
+	}).format(value) + range.unit;
+	host.innerHTML = `
+    ${heroMarkup}
+    <div class="pulsar-view" aria-label="Pulsar">
+      <div class="pulsar-viewport">
+        <div class="pulsar-canvas-host"></div>
+        <div class="pulsar-hotspots" aria-label="Partes do pulsar">
+          ${PULSAR_HOTSPOTS.map((hotspot, index) => `<div class="pulsar-hotspot" data-hotspot="${index}" hidden><button type="button" aria-expanded="false" aria-controls="pulsar-note-${index}"><i aria-hidden="true"></i>${hotspot.label}</button><p id="pulsar-note-${index}" hidden>${hotspot.description}</p></div>`).join("")}
+        </div>
+        <div class="pulsar-status" aria-live="polite"><i aria-hidden="true"></i><span></span></div>
+        <div class="pulsar-message" role="status"><span>${t.loading}</span><button type="button" hidden>${t.retry}</button></div>
+        <p class="pulsar-gesture">Arraste para girar · Role para dar zoom${coarse.matches ? "<br>No celular, use dois dedos para ampliar." : ""}</p>
+        <span class="pulsar-accessible-hint">${t.keyboard}</span>
+      </div>
+      <aside class="pulsar-panel" aria-label="${t.controls}">
+        <header class="pulsar-heading"><h2>Pulsar<span aria-hidden="true">.</span></h2><p class="pulsar-type">${t.type}</p><p class="pulsar-description">${t.description}</p></header>
+        <fieldset class="pulsar-ranges" disabled><legend>${t.controls}</legend>
+          ${ranges.map((range) => `<label class="pulsar-range"><span>${t[range.key]}<output>${format(settings[range.key], range)}</output></span><input type="range" name="${range.key}" aria-label="${t[range.key]}" min="${range.min}" max="${range.max}" step="${range.step}" value="${settings[range.key]}"></label>`).join("")}
+        </fieldset>
+        <div class="pulsar-actions"><button type="button" class="pulsar-pause" disabled></button><button type="button" class="pulsar-reset" disabled>${icon("reset")}<span>${t.reset}</span></button></div>
+        <details class="pulsar-about"><summary>${t.about}</summary><p>${t.explanation}</p></details>
+      </aside>
+    </div>${closingMarkup}`;
+	const viewport = host.querySelector(".pulsar-canvas-host");
+	const status = host.querySelector(".pulsar-status");
+	const pauseButton = host.querySelector(".pulsar-pause");
+	const resetButton = host.querySelector(".pulsar-reset");
+	const message = host.querySelector(".pulsar-message");
+	const fieldset = host.querySelector("fieldset");
+	const retry = message.querySelector("button");
+	const updatePaused = () => {
+		pauseButton.innerHTML = `${icon(paused ? "play" : "pause")}<span>${paused ? t.play : t.pause}</span>`;
+		pauseButton.setAttribute("aria-pressed", String(paused));
+		status.dataset.paused = String(paused);
+		status.querySelector("span").textContent = paused ? t.paused : t.live;
+		controller?.setPaused(paused);
+	};
+	updatePaused();
+	const disposeLanding = mountLanding(host, {
+		media,
+		signal: listeners.signal,
+		onMotionChange(value) {
+			paused = value;
+			updatePaused();
+		}
+	});
+	const hotspots = [...host.querySelectorAll(".pulsar-hotspot")];
+	for (const hotspot of hotspots) {
+		const button = hotspot.querySelector("button");
+		button.addEventListener("click", () => {
+			const expanded = button.getAttribute("aria-expanded") !== "true";
+			for (const other of hotspots) {
+				other.querySelector("button").setAttribute("aria-expanded", "false");
+				other.querySelector("p").hidden = true;
+			}
+			button.setAttribute("aria-expanded", String(expanded));
+			hotspot.querySelector("p").hidden = !expanded;
+		}, { signal: listeners.signal });
+	}
+	function showError() {
+		if (disposed) return;
+		message.hidden = false;
+		message.querySelector("span").textContent = t.error;
+		retry.hidden = false;
+		fieldset.disabled = true;
+		pauseButton.disabled = true;
+		resetButton.disabled = true;
+		status.hidden = true;
+		hotspots.forEach((hotspot) => {
+			hotspot.hidden = true;
+		});
+	}
+	async function initialize() {
+		const currentAttempt = ++attempt;
+		controller?.dispose();
+		controller = null;
+		message.hidden = false;
+		message.querySelector("span").textContent = t.loading;
+		retry.hidden = true;
+		try {
+			const { createPulsarScene } = await Promise.resolve().then(() => (init_createPulsarScene(), createPulsarScene_exports));
+			if (disposed || currentAttempt !== attempt) return;
+			controller = createPulsarScene(viewport, {
+				settings,
+				paused,
+				transparent: true,
+				autoRotate: true,
+				modelUrl: "",
+				hotspots: PULSAR_HOTSPOTS,
+				onHotspots(points) {
+					points.forEach((point, index) => {
+						const element = hotspots[index];
+						element.hidden = !point.visible;
+						element.style.left = `${Math.max(8, Math.min(point.x, viewport.clientWidth - element.offsetWidth - 8))}px`;
+						element.style.top = `${Math.max(48, Math.min(point.y, viewport.clientHeight - 100))}px`;
+					});
+				},
+				onError: showError,
+				onReady() {
+					if (disposed) return;
+					message.hidden = true;
+					status.hidden = false;
+					fieldset.disabled = false;
+					pauseButton.disabled = false;
+					resetButton.disabled = false;
+				}
+			});
+			const canvas = viewport.querySelector("canvas");
+			if (canvas) canvas.setAttribute("aria-label", `${t.scene}. ${t.keyboard}`);
+		} catch {
+			showError();
+		}
+	}
+	for (const range of ranges) {
+		const input = host.querySelector(`[name="${range.key}"]`);
+		const updateValue = () => {
+			const value = Number(input.value);
+			settings[range.key] = value;
+			input.closest("label").querySelector("output").textContent = format(value, range);
+			input.style.setProperty("--range-progress", `${(value - range.min) / (range.max - range.min) * 100}%`);
+			input.setAttribute("aria-valuetext", format(value, range));
+			controller?.setSettings({ [range.key]: value });
+		};
+		updateValue();
+		input.addEventListener("input", updateValue, { signal: listeners.signal });
+	}
+	pauseButton.addEventListener("click", () => {
+		paused = !paused;
+		updatePaused();
+	}, { signal: listeners.signal });
+	resetButton.addEventListener("click", () => controller?.resetCamera(), { signal: listeners.signal });
+	retry.addEventListener("click", initialize, { signal: listeners.signal });
+	media.addEventListener("change", () => {
+		paused = media.matches;
+		updatePaused();
+	}, { signal: listeners.signal });
+	initialize();
+	return {
+		getState: () => controller?.getState() || {
+			paused,
+			settings,
+			ready: false
+		},
+		dispose() {
+			disposed = true;
+			attempt++;
+			listeners.abort();
+			disposeLanding();
+			controller?.dispose();
+			host.replaceChildren();
+		}
+	};
+}
+//#endregion
+//#region src/pulsar/standalone.js
+var view = mountPulsar(document.querySelector("#pulsar"), { lang: "pt" });
+window.addEventListener("pagehide", (event) => {
+	if (!event.persisted) view.dispose();
+});
+//#endregion
+
+  </script>
+</body>
+</html>

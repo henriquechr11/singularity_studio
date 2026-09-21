@@ -1,0 +1,187 @@
+.pulsar-mount {
+  --pulsar-ice: #4cc9f0;
+  --pulsar-text: #eef5ff;
+  --pulsar-muted: #94a5ba;
+  color: var(--pulsar-text);
+  background: #05070f;
+  font-family: 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+.pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { box-sizing: border-box; }
+.pulsar-view { display: grid; grid-template-columns: minmax(0, 1fr) 296px; }
+.pulsar-viewport { position: relative; min-width: 0; aspect-ratio: 1; align-self: center; background: #020814; overflow: hidden; }
+.pulsar-canvas-host { position: absolute; inset: 0; }
+.pulsar-canvas-host canvas { display: block; width: 100%; height: 100%; touch-action: none; outline-offset: -3px; }
+.pulsar-mount :is(button, input, summary, canvas):focus-visible { outline: 2px solid var(--pulsar-ice); outline-offset: 4px; }
+.pulsar-mount canvas:focus-visible { outline-offset: -4px; }
+.pulsar-status { position: absolute; top: 25px; left: 25px; display: flex; align-items: center; gap: 8px; color: #b0c2d8; font-size: 11px; pointer-events: none; }
+.pulsar-status i { width: 4px; height: 4px; background: #8fc6ff; border-radius: 50%; box-shadow: 0 0 8px #338aff; }
+.pulsar-status[data-paused='true'] i { background: #8291a4; box-shadow: none; }
+.pulsar-gesture { position: absolute; bottom: 21px; left: 24px; right: 24px; margin: 0; text-align: center; font-size: 10px; line-height: 1.7; color: #9aadc5; pointer-events: none; }
+.pulsar-accessible-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pulsar-message { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; padding: 40px; background: #020814; color: #b7c9df; text-align: center; font-size: 13px; line-height: 1.8; }
+.pulsar-mount [hidden] { display: none !important; }
+.pulsar-panel { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 52px 28px 30px; background: #050b15; border-left: 1px solid #b1d0ff13; }
+.pulsar-heading h2 { margin: 0; font-family: var(--display, 'Arial Narrow', sans-serif); font-weight: 500; font-size: 58px; letter-spacing: -2px; line-height: 1; }
+.pulsar-heading h2 span { color: #80b5ff; }
+.pulsar-type { margin: 12px 0 0; font-size: 12px; color: var(--pulsar-ice); }
+.pulsar-description { margin: 20px 0 0; font-size: 12px; line-height: 1.85; color: var(--pulsar-muted); }
+.pulsar-ranges { display: grid; gap: 15px; padding: 0; margin: 30px 0 20px; border: 0; min-width: 0; }
+.pulsar-ranges legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.pulsar-ranges:disabled { opacity: .45; }
+.pulsar-range { display: block; min-width: 0; }
+.pulsar-range > span { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 11px; line-height: 1.5; color: #b7c7d9; }
+.pulsar-range output { color: #e6f2ff; font-size: 11px; font-variant-numeric: tabular-nums; min-width: 35px; text-align: right; }
+.pulsar-range input { display: block; appearance: none; width: 100%; height: 24px; padding: 0; margin: 5px 0 0; background: transparent; cursor: pointer; touch-action: pan-y; border: 0; border-radius: 0; }
+.pulsar-range input::-webkit-slider-runnable-track { height: 2px; border-radius: 1px; background: linear-gradient(to right, #6c9cd0 var(--range-progress), #253144 var(--range-progress)); }
+.pulsar-range input::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; margin-top: -4px; border: 0; border-radius: 50%; background: #c1deff; box-shadow: 0 0 0 4px #80aeee10; }
+.pulsar-range input::-moz-range-track { height: 2px; background: #253144; }
+.pulsar-range input::-moz-range-progress { height: 2px; background: #6c9cd0; }
+.pulsar-range input::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: #c1deff; }
+.pulsar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pulsar-mount button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 12px; border: 1px solid #c2dcff25; border-radius: 3px; color: #caddf2; background: transparent; font: inherit; font-size: 10px; cursor: pointer; transition: background .2s, border-color .2s; }
+.pulsar-mount button:hover { background: #88b5ff12; border-color: #b4d3ff66; }
+.pulsar-mount button:disabled { opacity: .4; cursor: default; }
+.pulsar-actions .pulsar-pause { flex: 1; background: #97c7ff13; }
+.pulsar-actions .pulsar-reset { flex: 1.3; }
+.pulsar-mount svg { display: block; flex: 0 0 auto; }
+.pulsar-about { margin-top: 25px; color: var(--pulsar-muted); border-top: 1px solid #c2dcff18; padding-top: 18px; }
+.pulsar-about summary { font-size: 11px; cursor: pointer; list-style-position: inside; }
+.pulsar-about p { margin: 14px 0 0; font-size: 11px; line-height: 1.85; }
+
+/* Scoped overrides preserve the other project dialogs. Native dialog scroll
+   remains available when the panel grows or the viewport is short. */
+.project-dialog.pulsar-dialog { width: min(1080px, 94vw); max-width: none; max-height: 94dvh; padding: 0; overflow: auto; overscroll-behavior: contain; background: #02060d; border: 1px solid #bedcff24; }
+.pulsar-dialog .dialog-close { z-index: 3; width: 32px; height: 32px; top: 12px; right: 12px; background: #071221cf; color: #c6dbf6; border-color: #bedcff25; }
+
+@media (max-width: 760px) {
+  .pulsar-view { grid-template-columns: minmax(0, 1fr) 260px; }
+  .pulsar-panel { padding: 50px 20px 25px; }
+  .pulsar-viewport { min-height: 440px; aspect-ratio: auto; align-self: stretch; }
+  .pulsar-heading h2 { font-size: 48px; }
+}
+
+@media (max-width: 600px) {
+  .project-dialog.pulsar-dialog { width: calc(100% - 20px); max-height: 94dvh; }
+  .pulsar-view { grid-template-columns: minmax(0, 1fr); }
+  .pulsar-viewport { aspect-ratio: 1; min-height: 0; }
+  .pulsar-panel { display: block; padding: 25px 25px 28px; border-left: 0; border-top: 1px solid #b1d0ff13; }
+  .pulsar-heading h2 { font-size: 48px; }
+  .pulsar-type { margin-top: 9px; }
+  .pulsar-description { margin-top: 15px; max-width: 390px; }
+  .pulsar-ranges { margin-top: 25px; gap: 17px; }
+  .pulsar-range > span, .pulsar-range output { font-size: 12px; }
+  .pulsar-range input { height: 30px; }
+  .pulsar-actions button { min-height: 44px; font-size: 11px; }
+  .pulsar-status { top: 20px; left: 20px; font-size: 10px; }
+  .pulsar-gesture { bottom: 14px; left: 16px; right: 16px; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { transition: none !important; }
+}
+
+/* LANDING — mobile first. Tokens: night #05070f, cyan #4cc9f0,
+   violet #a58bfa, ice #eef5ff, muted #a2afc4. */
+.pulsar-mount { --pulsar-violet: #a58bfa; --pulsar-muted: #a2afc4; overflow: clip; }
+.pulsar-mount :is(h1, h2, h3, .pulsar-wordmark, .pulsar-fact strong) { font-family: 'Space Grotesk', sans-serif; }
+.pulsar-mount :is(h1, h2, h3, p) { margin: 0; }
+.pulsar-mount button { min-height: 44px; }
+.pulsar-topbar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 6%; padding-right: 76px; }
+.pulsar-wordmark { display: inline-flex; align-items: center; gap: 12px; font-size: 25px; letter-spacing: -1.2px; }
+.pulsar-wordmark > span { color: var(--pulsar-ice); font-size: 26px; }
+.pulsar-topbar > span:last-child { display: none; color: var(--pulsar-muted); font-size: 11px; }
+
+/* 1. Hero: a single luminous axis is the visual signature. */
+.pulsar-hero { position: relative; isolation: isolate; min-height: 670px; min-height: min(780px, 95svh); display: flex; align-items: center; padding: 190px 7% 145px; }
+.pulsar-hero-copy { position: relative; z-index: 1; max-width: 660px; }
+.pulsar-hero h1 { max-width: 620px; font-size: clamp(44px, 7.2vw, 96px); font-weight: 500; line-height: 1.03; letter-spacing: -.065em; text-wrap: balance; }
+.pulsar-hero-copy > p { max-width: 410px; margin-top: 26px; font-size: 14px; line-height: 1.85; color: #bdc9db; }
+.pulsar-mount .pulsar-explore { min-width: 152px; justify-content: space-between; margin-top: 32px; padding: 14px 20px; font-size: 13px; color: var(--pulsar-text); border-color: #4cc9f066; border-radius: 30px; background: #4cc9f00c; }
+.pulsar-explore span { color: var(--pulsar-ice); font-size: 20px; }
+.pulsar-hero-foot { position: absolute; bottom: 25px; left: 7%; right: 7%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-motion { font-size: 10px; border: 0; padding: 8px 0; color: var(--pulsar-muted); }
+.pulsar-stars { position: absolute; inset: -70px 0 0; z-index: -2; opacity: .55; background-image: radial-gradient(1px 1px at 13% 19%, #eef5ff 99%, transparent), radial-gradient(1px 1px at 78% 72%, #4cc9f0 99%, transparent), radial-gradient(1px 1px at 49% 42%, #eef5ff 99%, transparent), radial-gradient(1.5px 1.5px at 81% 21%, #a58bfa 99%, transparent); background-size: 193px 223px, 271px 191px, 337px 283px, 419px 337px; animation: pulsar-stars 8s ease-in-out infinite alternate; mask-image: linear-gradient(#000, #000 70%, transparent); }
+.pulsar-lighthouse { position: absolute; z-index: -1; width: 380px; height: 380px; right: -110px; top: -60px; transform: rotate(-28deg); pointer-events: none; opacity: .8; }
+.pulsar-lighthouse::before { content: ''; position: absolute; inset: -45%; background: radial-gradient(ellipse, #4cc9f018, #a58bfa08 30%, transparent 65%); }
+.pulsar-lighthouse i { position: absolute; width: 7px; height: 135%; left: 50%; top: -17%; background: linear-gradient(transparent, #4cc9f078 30%, #ebfcff 50%, #4cc9f078 70%, transparent); filter: blur(2px); box-shadow: 0 0 38px #4cc9f02a; animation: pulsar-beacon 2s ease-in-out infinite; }
+.pulsar-lighthouse b { position: absolute; inset: 23%; border: 1px solid #4cc9f080; border-radius: 50%; transform: rotateX(65deg); box-shadow: 0 0 26px #4cc9f025, inset 0 0 20px #4cc9f020; animation: pulsar-glow 2s ease-in-out infinite; }
+.pulsar-lighthouse span { position: absolute; inset: 46%; border-radius: 50%; background: #e8faff; box-shadow: 0 0 24px #4cc9f0, 0 0 70px #4cc9f0b3, 0 0 130px #9271ee66; }
+.pulsar-glow { animation: pulsar-glow 2s ease-in-out infinite; }
+.pulsar-divider { position: relative; }
+.pulsar-divider::before { content: ''; position: absolute; top: 0; left: 7%; right: 7%; height: 1px; background: linear-gradient(90deg, #4cc9f050, #a58bfa30, transparent); animation: pulsar-beacon 2s ease-in-out infinite; }
+
+/* 2. Scene and annotations. Labels are positioned by the 3D camera. */
+.pulsar-model, .pulsar-facts { padding: 55px 7%; }
+.pulsar-section-heading { display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px; }
+.pulsar-section-heading h2 { font-size: clamp(30px, 4vw, 48px); font-weight: 400; line-height: 1.12; letter-spacing: -.045em; }
+.pulsar-section-heading h2 { scroll-margin-top: 40px; }
+.pulsar-section-heading p { font-size: 12px; line-height: 1.8; color: var(--pulsar-muted); }
+.pulsar-view { grid-template-columns: minmax(0, 1fr); border: 1px solid #4cc9f025; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at 35% 45%, #11243b66, transparent 65%); }
+.pulsar-viewport { aspect-ratio: auto; height: 440px; min-height: 0; align-self: stretch; background: transparent; }
+.pulsar-panel { padding: 30px 24px; border-left: 0; border-top: 1px solid #4cc9f020; background: #090d18a6; }
+.pulsar-heading h2 { font-size: 32px; letter-spacing: -1.5px; }
+.pulsar-heading .pulsar-type { margin-top: 10px; }
+.pulsar-heading .pulsar-description { margin-top: 16px; }
+.pulsar-about p { margin-top: 14px; }
+.pulsar-gesture { font-size: 10px; bottom: 16px; }
+.pulsar-hotspots { position: absolute; inset: 0; pointer-events: none; }
+.pulsar-hotspot { position: absolute; max-width: 205px; pointer-events: auto; z-index: 1; }
+.pulsar-hotspot:has([aria-expanded='true']) { z-index: 2; }
+.pulsar-mount .pulsar-hotspot button { min-height: 44px; padding: 5px 9px; border: 1px solid #4cc9f033; border-radius: 24px; background: #05070fd9; backdrop-filter: blur(8px); color: #d5efff; font-size: 10px; white-space: nowrap; }
+.pulsar-hotspot i { width: 6px; height: 6px; border-radius: 50%; background: var(--pulsar-ice); box-shadow: 0 0 10px #4cc9f0; flex-shrink: 0; }
+.pulsar-hotspot p { padding: 12px; margin-top: 5px; font-size: 11px; line-height: 1.65; background: #101726f5; border: 1px solid #4cc9f033; border-radius: 8px; color: #d0dcec; }
+.pulsar-message { z-index: 3; background: #070b15; }
+
+/* 3. Facts and a quiet closing. */
+.pulsar-fact-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pulsar-fact { min-width: 0; padding: 27px 22px; border: 1px solid #4cc9f029; border-radius: 8px; background: linear-gradient(145deg, #101725, #080b15); }
+.pulsar-fact strong { display: block; font-size: 46px; font-weight: 400; letter-spacing: -2px; line-height: 1.3; color: #def7ff; }
+.pulsar-fact strong small { font-size: 16px; letter-spacing: -.4px; }
+.pulsar-fact strong > span { color: var(--pulsar-violet); font-size: 28px; }
+.pulsar-fact h3 { font-size: 14px; font-weight: 500; margin: 14px 0 10px; color: #d5e0f2; }
+.pulsar-fact p { max-width: 300px; font-size: 12px; line-height: 1.85; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-closing { padding: 80px 0; font-family: 'Space Grotesk', sans-serif; text-align: center; font-size: clamp(24px, 3.5vw, 42px); line-height: 1.35; letter-spacing: -.04em; color: #c8d4e8; }
+.pulsar-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding-top: 24px; border-top: 1px solid #a58bfa25; }
+.pulsar-footer > span:nth-child(2) { font-size: 11px; color: var(--pulsar-muted); }
+.pulsar-mount .pulsar-top { border: 0; padding: 0; font-size: 11px; }
+.pulsar-reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s ease; }
+.pulsar-reveal.is-visible { opacity: 1; transform: none; }
+
+/* The PULSAR project opens as a full-page experience; all other dialogs retain their layout. */
+.project-dialog.pulsar-dialog { width: 100%; height: 100dvh; max-height: 100dvh; max-width: none; margin: 0; border: 0; border-radius: 0; background: #05070f; }
+.pulsar-dialog .dialog-close { position: fixed; top: 20px; right: 22px; z-index: 10; width: 40px; height: 40px; background: #0d1623ed; }
+.pulsar-dialog .dialog-close:hover { background: #183048; color: #eef5ff; }
+@media (min-width: 600px) {
+  .pulsar-topbar > span:last-child { display: block; }
+  .pulsar-hero { padding-top: 90px; padding-bottom: 120px; }
+  .pulsar-lighthouse { width: 560px; height: 560px; right: -140px; top: 0; opacity: .65; }
+  .pulsar-fact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulsar-section-heading { flex-direction: row; align-items: end; justify-content: space-between; gap: 40px; }
+  .pulsar-section-heading p { max-width: 250px; }
+}
+@media (min-width: 950px) {
+  .pulsar-hero { min-height: min(720px, 84svh); }
+  .pulsar-hero-copy { max-width: 60%; }
+  .pulsar-lighthouse { width: 680px; height: 680px; right: -25px; top: -25px; opacity: 1; }
+  .pulsar-model, .pulsar-facts { padding-top: 75px; padding-bottom: 65px; }
+  .pulsar-view { grid-template-columns: minmax(0, 1fr) 275px; }
+  .pulsar-viewport { height: 590px; }
+  .pulsar-panel { padding: 30px 24px; border-top: 0; border-left: 1px solid #4cc9f020; }
+  .pulsar-fact-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pulsar-fact { padding: 25px 20px; }
+  .pulsar-fact strong { font-size: clamp(34px, 3.4vw, 52px); }
+  .pulsar-fact strong small { font-size: 13px; }
+}
+@media (min-width: 1600px) {
+  .pulsar-topbar, .pulsar-hero, .pulsar-model, .pulsar-facts { padding-left: max(7%, calc((100% - 1400px) / 2)); padding-right: max(7%, calc((100% - 1400px) / 2)); }
+}
+@keyframes pulsar-beacon { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@keyframes pulsar-glow { 0%, 100% { box-shadow: 0 0 0 #4cc9f000; } 50% { box-shadow: 0 0 18px #4cc9f015, inset 0 0 12px #4cc9f006; } }
+@keyframes pulsar-stars { from { opacity: .35; transform: translateY(0); } to { opacity: .7; transform: translateY(6px); } }
+.pulsar-mount[data-motion-paused='true'] *, .pulsar-mount[data-motion-paused='true'] *::before { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .pulsar-mount *, .pulsar-mount *::before, .pulsar-mount *::after { animation: none !important; scroll-behavior: auto !important; }
+  .pulsar-reveal { opacity: 1; transform: none; }
+}

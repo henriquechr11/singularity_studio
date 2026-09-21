@@ -9,7 +9,7 @@ async function scrollToProgress(page, value) {
   await expect.poll(async () => Number(await page.locator('.intro-stage').getAttribute('data-progress'))).toBeCloseTo(value, 2)
 }
 
-test('GLB + Draco, cinematic camera, scroll handoff and reversible hero reveal', async ({ page }) => {
+test('GLB + Draco, cinematic camera and one-way handoff to the hero', async ({ page }) => {
   const errors = [], requests = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('request', request => requests.push(request.url()))
@@ -51,10 +51,12 @@ test('GLB + Draco, cinematic camera, scroll handoff and reversible hero reveal',
   await expect(stage).toBeHidden()
   await expect(page.locator('#hero-title')).toBeInViewport()
   await page.screenshot({ path: 'test-results/cinematic-hero.png' })
-  await scrollToProgress(page, .48)
-  await expect(stage).toBeVisible()
-  await expect(page.locator('.site-shell')).toHaveAttribute('inert', '')
-  await expect.poll(async () => Number(await stage.getAttribute('data-distance'))).toBeCloseTo(wide, 1)
+  const heroTop = await page.locator('.cinematic-intro').evaluate(element => element.offsetHeight)
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  await expect.poll(async () => page.evaluate(() => window.scrollY)).toBeCloseTo(heroTop, 0)
+  await expect(stage).toBeHidden()
+  await expect(page.locator('.site-shell')).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.locator('#hero-title')).toBeInViewport()
   expect(requests.some(url => /black_hole\.draco.*\.glb/.test(url))).toBe(true)
   expect(requests.some(url => url.includes('draco_decoder') && url.includes('.wasm'))).toBe(true)
   expect(requests.some(url => /\/black_hole\.glb/.test(url))).toBe(false)
@@ -80,6 +82,26 @@ test('clean intro supports keyboard scroll and Escape without on-screen controls
   await page.keyboard.press('Escape')
   await expect(page.locator('#hero-title')).toBeFocused()
   await expect(stage).toBeHidden()
+})
+
+test('hero entrance holds the top for one second before releasing scroll', async ({ page }) => {
+  await page.goto('/')
+  const stage = page.locator('.intro-stage')
+  const site = page.locator('.site-shell')
+  await expect(stage).toHaveAttribute('data-mode', 'ready', { timeout: 30000 })
+  await scrollToProgress(page, 1)
+
+  await expect(site).toHaveClass(/site-entering/)
+  await expect(page.locator('html')).toHaveClass(/lenis-stopped/)
+  await expect(page.locator('.hero-copy h1 > span').first()).toHaveCSS('animation-name', 'hero-entry-title')
+  await expect(page.locator('.hero-visual')).toHaveCSS('animation-name', 'hero-entry-visual')
+  const heroTop = await page.locator('.cinematic-intro').evaluate(element => element.offsetHeight)
+  await page.mouse.wheel(0, 1200)
+  await page.waitForTimeout(250)
+  expect(await page.evaluate(() => window.scrollY)).toBeCloseTo(heroTop, 0)
+
+  await expect(site).not.toHaveClass(/site-entering/, { timeout: 1500 })
+  await expect(page.locator('html')).not.toHaveClass(/lenis-stopped/)
 })
 
 test('mobile uses reduced effects and survives viewport rotation', async ({ page }) => {

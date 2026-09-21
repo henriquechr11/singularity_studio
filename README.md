@@ -26,7 +26,7 @@ Os textos e projetos ficam em `src/content.js`. Os quatro projetos estão explic
 
 `src/CinematicIntro.jsx` controla o canvas fixo em tela cheia, o carregamento real do GLB e a entrada no site. `src/cinematic/createScene.js` monta a cena, o disco original do modelo, o horizonte opaco, o anel de fótons, as estrelas, o bloom e a lente gravitacional estilizada. Os efeitos são uma interpretação artística.
 
-A abertura usa um trecho de scroll de `1000svh` (10 telas) no desktop e `850svh` (8,5 telas) no mobile. O conteúdo fica visualmente fixado atrás do canvas durante a travessia; depois volta ao fluxo normal da página. A abertura mostra somente a cena, sem textos, logotipo, botões ou indicadores. A rolagem permanece livre; PageDown/Espaço avançam pelo teclado e Escape leva diretamente ao site.
+A abertura usa um trecho de scroll de `1000svh` (10 telas) no desktop e `850svh` (8,5 telas) no mobile. O conteúdo fica visualmente fixado atrás do canvas durante a travessia; depois volta ao fluxo normal da página. A abertura mostra somente a cena, sem textos, logotipo, botões ou indicadores. A rolagem permanece livre durante a travessia; ao chegar à hero, ela é retida por um segundo enquanto os componentes entram em cena. PageDown/Espaço avançam pelo teclado e Escape leva diretamente ao site.
 
 | Progresso | Câmera e transição |
 | --- | --- |
@@ -34,7 +34,7 @@ A abertura usa um trecho de scroll de `1000svh` (10 telas) no desktop e `850svh`
 | 0–48% | Afasta a câmera até revelar o disco inteiro e recentraliza o horizonte. A pose inicial é capturada no início do scroll; FOV passa de 28° a 44°. |
 | 48–90% | Avança até o interior da singularidade; FOV aumenta de 44° a 76°. |
 | 84–91% | Escurecimento gradual no horizonte de eventos. |
-| 92–100% | Canvas desaparece e a hero surge com fade e escala suaves. |
+| 92–100% | Canvas desaparece; a hero é fixada no topo por um segundo enquanto header, título, visual e controles entram em sequência. |
 
 As coordenadas ficam em `src/cinematic/cameraPath.js`. O progresso usa damping exponencial independente da taxa de quadros e limite de velocidade para suavizar rolagens bruscas; câmera, lente, blackout e hero compartilham esse progresso. Após o primeiro scroll, a câmera permanece sob controle da rolagem, inclusive ao retornar ao topo. A travessia é reversível. Links diretos, rolagem restaurada e Escape permitem chegar ao conteúdo sem exigir a sequência inteira. A lente acompanha o centro projetado da singularidade, inclusive durante o close lateral.
 
@@ -60,6 +60,52 @@ O script converte os materiais legados para metallic/roughness, remove o planeta
 Modelo **Black Hole**, por **NestaEric**: [fonte no Sketchfab](https://sketchfab.com/3d-models/black-hole-e410da98b1e5445eae2acafaaa53587d), licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). A atribuição e a indicação de adaptação aparecem no rodapé e em `public/model-credits.txt`.
 
 Fontes: Barlow Condensed, DM Sans e Space Mono via Google Fonts, com fontes de sistema como alternativa. As artes dos projetos são feitas em CSS, sem imagens remotas.
+
+## Pulsar interativo
+
+O projeto PULSAR abre uma landing page em português do Brasil, em tela cheia,
+com hero animada, modelo interativo e quatro cartões de dados. O modelo original
+Three.js mantém núcleo azul-branco, feixes, plumas e partículas, agora com fundo
+transparente, câmera em auto-rotação e três hotspots que acompanham a cena.
+O painel controla rotação, inclinação, bloom, largura
+e quantidade de partículas. Arraste para orbitar, use a roda para zoom e
+Shift + arraste para pan; no toque, use dois dedos para zoom e pan. Com o canvas
+em foco, as setas movem a câmera e `+` / `-` aproximam e afastam.
+
+- `src/Pulsar.jsx` integra a landing ao diálogo do projeto PULSAR.
+- `src/pulsar/landing.js` reúne os textos, o IntersectionObserver e as opções de personalização.
+  `PULSAR_MODEL_URL` vazio usa o modelo procedural; substitua por `/models/pulsar.glb`
+  para carregar GLB/GLTF (centralizado e dimensionado automaticamente).
+  `PULSAR_HOTSPOTS` define legendas, descrições e posições `[x, y, z]` em unidades 3D.
+  Ajuste as posições ao trocar o modelo. `space: 'beam'` acompanha os feixes;
+  `space: 'world'` permanece no eixo fixo. Os sliders ajustam o modelo procedural.
+- `src/pulsar/mountPulsar.js` implementa o painel compartilhado com o HTML independente.
+- `src/pulsar/createPulsarScene.js` organiza a cena, OrbitControls, bloom, ACES e ciclo de vida.
+- `src/pulsar/shaders.js` contém os shaders dos feixes, filamentos, partículas, halo e ambiente.
+- `public/pulsar.html` é o arquivo completo e independente: pode ser aberto diretamente
+  ou em `/pulsar.html`. Requer conexão para Three.js e seus addons oficiais,
+  fixados na versão 0.186.0 via jsDelivr, e para Space Grotesk/Inter via Google Fonts
+  (com fallback local). Não persiste configurações. Um modelo opcional em caminho
+  relativo deve ser servido por HTTP, junto de seus arquivos auxiliares.
+
+Para ajustar **cores**, altere `PULSAR_COLORS` em `createPulsarScene.js`.
+Para **largura**, use o slider ou ajuste `beamWidth` nos valores iniciais de
+`mountPulsar.js`. Para **turbulência**, aumente ou diminua `PULSAR_TURBULENCE`
+(padrão `0.58`); a função GLSL `plasmaCenter` define a frequência e a velocidade
+das ondulações. Essas definições também estão incluídas no HTML completo.
+Depois de editar os módulos, regenere o arquivo independente:
+
+```sh
+npm run export:pulsar
+```
+
+A pausa congela rotação, precessão, partículas e grão, mas mantém a câmera
+interativa. Movimento reduzido inicia a cena pausada. Renderização suspensa
+fora da tela/aba oculta, geometria fixa de partículas com animação na GPU,
+DPR limitado a 1,5 com redução adaptativa e descarte dos recursos ao fechar.
+No Chrome headless local, com Intel UHD Graphics e canvas de 782 × 782 px,
+uma amostra de 240 quadros mediu aproximadamente 78 fps; o resultado varia
+com o dispositivo, resolução e configurações dos efeitos.
 
 ## Verificação
 

@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/export-pulsar.mjs && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "export:pulsar": "node scripts/export-pulsar.mjs",
     "optimize:model": "node scripts/optimize-black-hole.mjs"
   },
   "dependencies": {

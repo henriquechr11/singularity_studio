@@ -8,7 +8,7 @@ function initialMode() {
   return 'loading'
 }
 
-export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }) {
+export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange, onLoadingProgress, onSceneReady }) {
   const [mode, setMode] = useState(initialMode)
   const [complete, setComplete] = useState(false)
   const trackRef = useRef(null), stageRef = useRef(null), canvasRef = useRef(null)
@@ -16,6 +16,11 @@ export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }
   const state = useRef({ mode, progress: 0, controlled: false, revealed: false })
 
   useEffect(() => { state.current.mode = mode }, [mode])
+  useEffect(() => {
+    // Accessibility and data-saving fallbacks intentionally skip WebGL/model
+    // loading. There is no scene initialization left to wait for in these modes.
+    if (mode === 'static' || mode === 'reduced') onSceneReady?.()
+  }, [mode, onSceneReady])
 
   useEffect(() => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)')
@@ -40,13 +45,18 @@ export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }
     canvas.addEventListener('webglcontextlost', failed)
     import('./cinematic/createScene').then(({ createScene }) => {
       if (!active) return null
-      return createScene({ canvas, quality, signal: abort.signal, onProgress: value => { if (active) stageRef.current.dataset.loaded = String(value) } })
+      return createScene({ canvas, quality, signal: abort.signal, onProgress: value => {
+        if (!active) return
+        stageRef.current.dataset.loaded = String(value)
+        onLoadingProgress?.(value)
+      } })
     }).then(engine => {
       clearTimeout(timeout)
       if (!engine) return
       if (!active) { engine.dispose(); return }
       engineRef.current = engine
       setMode('ready')
+      onSceneReady?.()
     }).catch(() => { clearTimeout(timeout); failed() })
     return () => {
       active = false
@@ -56,11 +66,11 @@ export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }
       engineRef.current = null
       canvas.removeEventListener('webglcontextlost', failed)
     }
-  }, [animated])
+  }, [animated, onLoadingProgress, onSceneReady])
 
   useEffect(() => {
     const track = trackRef.current, stage = stageRef.current, site = siteRef.current
-    let frame, holdTimer, holding = false, hasHeld = false
+    let frame, holdTimer, entryFrame, holding = false, hasHeld = false
     let last = performance.now(), span = track.offsetHeight, target = 0, dirty = true
     let samples = 0, slowTime = 0, downgraded = false
     const notifyReveal = reveal => {
@@ -89,7 +99,20 @@ export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }
       window.dispatchEvent(new CustomEvent('singularity:skip-intro', { detail: span }))
       window.scrollTo({ top: span, behavior: 'instant' })
       notifyReveal(true)
-      holdTimer = window.setTimeout(finishHold, 1000)
+      // The hero is intentionally revealed in layers. Do not release scrolling
+      // on an arbitrary delay: wait for every entrance animation to finish.
+      // The timeout only prevents a browser interruption from trapping the page.
+      holdTimer = window.setTimeout(finishHold, 2600)
+      entryFrame = requestAnimationFrame(() => {
+        entryFrame = requestAnimationFrame(() => {
+          const entries = site.getAnimations({ subtree: true })
+            .filter(animation => (animation.animationName || '').startsWith('hero-entry-'))
+          if (!entries.length) { finishHold(); return }
+          Promise.allSettled(entries.map(animation => animation.finished)).then(() => {
+            if (holding) finishHold()
+          })
+        })
+      })
     }
     const readScroll = () => {
       if (holding) {
@@ -216,6 +239,7 @@ export default function CinematicIntro({ lang, siteRef, onReveal, onHoldChange }
     frame = requestAnimationFrame(update)
     return () => {
       cancelAnimationFrame(frame)
+      cancelAnimationFrame(entryFrame)
       clearTimeout(holdTimer)
       if (holding) onHoldChange(false)
       observer.disconnect()

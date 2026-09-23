@@ -1,3 +1,5 @@
+import { mountScrollAnimations } from './scrollAnimations.js'
+
 // TROQUE O CAMINHO AQUI: vazio preserva o pulsar procedural original.
 // Exemplo: '/models/meu-pulsar.glb' (GLB ou GLTF, com suas texturas).
 export const PULSAR_MODEL_URL = ''
@@ -33,10 +35,10 @@ export const closingMarkup = `
   <section class="pulsar-facts pulsar-divider" aria-labelledby="pulsar-facts-title">
     <div class="pulsar-section-heading pulsar-reveal"><h2 id="pulsar-facts-title">Pequeno em tamanho.<br>Imenso em extremos.</h2><p>Os números de uma estrela de nêutrons.</p></div>
     <div class="pulsar-fact-grid">
-      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~20 <small>km</small></strong><h3>de diâmetro</h3><p>~1,4 massa solar concentrada em uma esfera do tamanho de uma cidade.</p></article>
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~<span class="pulsar-counter" data-count="20"><span class="pulsar-counter-final">20</span><span class="pulsar-counter-value" aria-hidden="true">20</span></span> <small>km</small></strong><h3>de diâmetro</h3><p>~1,4 massa solar concentrada em uma esfera do tamanho de uma cidade.</p></article>
       <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>ms <span>→</span> s</strong><h3>por rotação</h3><p>Milissegundos a segundos. Cada volta pode trazer um novo pulso.</p></article>
       <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>1967</strong><h3>o primeiro sinal</h3><p>Descoberto em 1967 por Jocelyn Bell Burnell.</p></article>
-      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~30 <small>rotações/s</small></strong><h3>Pulsar do Caranguejo</h3><p>Um remanescente de supernova que continua marcando o tempo.</p></article>
+      <article class="pulsar-fact pulsar-glow pulsar-reveal"><strong>~<span class="pulsar-counter" data-count="30"><span class="pulsar-counter-final">30</span><span class="pulsar-counter-value" aria-hidden="true">30</span></span> <small>rotações/s</small></strong><h3>Pulsar do Caranguejo</h3><p>Um remanescente de supernova que continua marcando o tempo.</p></article>
     </div>
     <p class="pulsar-closing pulsar-reveal">No silêncio do espaço,<br>o universo tem seu próprio ritmo.</p>
     <footer class="pulsar-footer"><span class="pulsar-wordmark">pulsar<span aria-hidden="true">✳</span></span><span>Uma janela para o universo.</span><button type="button" class="pulsar-top">Voltar ao topo ↑</button></footer>
@@ -44,6 +46,9 @@ export const closingMarkup = `
 
 /** Observers and listeners belong to this mount and are released on close. */
 export function mountLanding(host, { media, signal, onMotionChange }) {
+  const listeners = new AbortController()
+  const listenerOptions = { signal: listeners.signal }
+  const animations = mountScrollAnimations(host, { media })
   if (!document.querySelector('#pulsar-fonts')) {
     const fonts = document.createElement('link')
     fonts.id = 'pulsar-fonts'
@@ -54,33 +59,33 @@ export function mountLanding(host, { media, signal, onMotionChange }) {
   const root = host.closest('dialog')
   if (root) root.scrollTop = 0
   const scrollTo = (element) => {
-    element.scrollIntoView({ behavior: media.matches ? 'instant' : 'smooth', block: 'start' })
+    element.scrollIntoView({ behavior: media.matches || host.dataset.motionPaused === 'true' ? 'instant' : 'smooth', block: 'start' })
     element.focus({ preventScroll: true })
   }
-  host.querySelector('.pulsar-explore').addEventListener('click', () => scrollTo(host.querySelector('#pulsar-model-title')), { signal })
+  host.querySelector('.pulsar-explore').addEventListener('click', () => scrollTo(host.querySelector('#pulsar-model-title')), listenerOptions)
   host.querySelector('.pulsar-top').addEventListener('click', () => {
-    (root || window).scrollTo({ top: 0, behavior: media.matches ? 'instant' : 'smooth' })
+    (root || window).scrollTo({ top: 0, behavior: media.matches || host.dataset.motionPaused === 'true' ? 'instant' : 'smooth' })
     host.querySelector('.pulsar-explore').focus({ preventScroll: true })
-  }, { signal })
+  }, listenerOptions)
   const motionButton = host.querySelector('.pulsar-motion')
   function setMotion(paused) {
     host.dataset.motionPaused = String(paused)
     motionButton.textContent = paused ? 'Retomar animações' : 'Pausar animações'
     motionButton.setAttribute('aria-pressed', String(paused))
+    animations.setPaused(paused)
   }
   setMotion(media.matches)
   motionButton.addEventListener('click', () => {
     const paused = host.dataset.motionPaused !== 'true'
     setMotion(paused)
     onMotionChange(paused)
-  }, { signal })
-  media.addEventListener('change', () => setMotion(media.matches), { signal })
-  const observer = new IntersectionObserver(entries => {
-    for (const entry of entries) if (entry.isIntersecting) {
-      entry.target.classList.add('is-visible')
-      observer.unobserve(entry.target)
-    }
-  }, { root, threshold: 0.08 })
-  host.querySelectorAll('.pulsar-reveal').forEach(element => observer.observe(element))
-  return () => observer.disconnect()
+  }, listenerOptions)
+  media.addEventListener('change', () => setMotion(media.matches), listenerOptions)
+  function dispose() {
+    listeners.abort()
+    animations.dispose()
+    signal.removeEventListener('abort', dispose)
+  }
+  signal.addEventListener('abort', dispose, { once: true })
+  return dispose
 }

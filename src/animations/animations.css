@@ -1,0 +1,5 @@
+.reading-progress { position: fixed; inset: 0 0 auto; height: 2px; z-index: 40; background: var(--orange); transform-origin: left; pointer-events: none; }
+/* Motion owns transforms on these controls; CSS keeps their existing color states. */
+[data-motion-control] { transition-property: color, background, border-color; }
+.button-primary[data-motion-control]:hover { transform: none; }
+[data-scroll-word] { display: inline-block; }

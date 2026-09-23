@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('desktop: WebGL, navigation, projects, language and contact', async ({ page }) => {
+test('desktop: WebGL, navigation, projects, language and visible sections', async ({ page }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width: 1440, height: 1000 })
@@ -24,17 +24,18 @@ test('desktop: WebGL, navigation, projects, language and contact', async ({ page
   await expect(page.locator('.dialog-body')).toContainText('Projeto demonstrativo')
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Ver menos projetos', exact: true }).click()
-  await page.locator('.faq summary').filter({ hasText: 'Qual é o investimento para um projeto?' }).click()
-  await expect(page.getByText('Cada proposta considera', { exact: false })).toBeVisible()
-  await page.getByRole('button', { name: 'Branding', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Branding', exact: true })).toHaveAttribute('aria-pressed','true')
-  await page.getByPlaceholder('Seu nome / empresa *').fill('Teste Studio')
-  await page.getByPlaceholder('Seu e-mail *').fill('teste@example.com')
-  await page.getByPlaceholder('O que vamos criar juntos? *').fill('Uma nova identidade visual.')
-  await page.getByRole('button', { name: 'Indicação', exact: true }).click()
-  await page.getByRole('button', { name: 'Solicitar reunião de diagnóstico', exact: true }).click()
-  await expect(page.locator('.form-result')).toBeVisible()
-  await expect(page.locator('.form-result textarea')).toHaveValue(/Teste Studio/)
+  await expect(page.locator('.project')).toHaveCount(2)
+  // These sections remain in the source but are intentionally hidden by the
+  // existing design. Animation setup must not restore them or their navigation.
+  await expect(page.locator('.faq')).toBeHidden()
+  await expect(page.locator('.contact')).toBeHidden()
+  await expect(page.locator('.header-contact')).toBeHidden()
+  await expect(page.locator('.navigation a[href="#contato"]')).toBeHidden()
+  const secondService = page.locator('.service').nth(1)
+  await secondService.locator('summary').click()
+  await expect(secondService).toHaveAttribute('open', '')
+  await expect(secondService.locator('.service-content')).toBeVisible()
+  await expect(page.locator('.service').first()).not.toHaveAttribute('open', '')
   await page.getByRole('button', { name: 'EN', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('lang','en')
   await expect(page.locator('h1')).toContainText('GRAVITY.')
@@ -53,12 +54,9 @@ test('mobile: responsive layout and menu', async ({ page }) => {
   await expect(page.locator('.site-shell')).toHaveAttribute('aria-hidden', 'false')
   await page.screenshot({ path: 'test-results/mobile.png' })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.getByRole('button', { name: 'Menu', exact: true }).click()
-  await expect(page.locator('.navigation')).toBeVisible()
-  await page.locator('.navigation').getByRole('link', { name: '04 Contato' }).click()
-  await expect(page.locator('.navigation')).not.toBeVisible()
-  await expect(page.locator('#contato')).toBeInViewport()
-  await page.screenshot({ path: 'test-results/mobile-contact.png' })
+  await page.locator('#estudio').scrollIntoViewIfNeeded()
+  await expect(page.locator('#estudio')).toBeInViewport()
+  await page.screenshot({ path: 'test-results/mobile-studio.png' })
 })
 
 test('reduced motion and WebGL fallback keep content available', async ({ page }) => {

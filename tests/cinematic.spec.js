@@ -84,7 +84,7 @@ test('clean intro supports keyboard scroll and Escape without on-screen controls
   await expect(stage).toBeHidden()
 })
 
-test('hero entrance holds the top for one second before releasing scroll', async ({ page }) => {
+test('hero entrance holds the top until every hero component has entered', async ({ page }) => {
   await page.goto('/')
   const stage = page.locator('.intro-stage')
   const site = page.locator('.site-shell')
@@ -93,15 +93,30 @@ test('hero entrance holds the top for one second before releasing scroll', async
 
   await expect(site).toHaveClass(/site-entering/)
   await expect(page.locator('html')).toHaveClass(/lenis-stopped/)
-  await expect(page.locator('.hero-copy h1 > span').first()).toHaveCSS('animation-name', 'hero-entry-title')
-  await expect(page.locator('.hero-visual')).toHaveCSS('animation-name', 'hero-entry-visual')
+  const titleLines = page.locator('.hero-copy h1 > span')
+  await expect(titleLines).toHaveCount(4)
   const heroTop = await page.locator('.cinematic-intro').evaluate(element => element.offsetHeight)
   await page.mouse.wheel(0, 1200)
   await page.waitForTimeout(250)
   expect(await page.evaluate(() => window.scrollY)).toBeCloseTo(heroTop, 0)
 
-  await expect(site).not.toHaveClass(/site-entering/, { timeout: 1500 })
+  // The final controls enter last, so a fixed one-second delay must not
+  // release scrolling while they are still animating.
+  await page.waitForTimeout(350)
+  await expect(site).toHaveClass(/site-entering/)
+  await expect(site).not.toHaveClass(/site-entering/, { timeout: 1800 })
   await expect(page.locator('html')).not.toHaveClass(/lenis-stopped/)
+  // Check the completed entrance independently of the animation library.
+  for (const line of await titleLines.all()) {
+    await expect(line).toHaveCSS('opacity', '1')
+    await expect.poll(() => line.evaluate(element => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform)
+      return Math.abs(matrix.m42)
+    })).toBeLessThan(.5)
+  }
+  await expect(page.locator('.hero-visual')).toHaveCSS('opacity', '1')
+  await page.mouse.wheel(0, 600)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(heroTop + 50)
 })
 
 test('mobile uses reduced effects and survives viewport rotation', async ({ page }) => {
@@ -177,10 +192,10 @@ test('data saver uses a static entrance without fetching the model', async ({ pa
 })
 
 test('deep links reach content without replaying the intro', async ({ page }) => {
-  await page.goto('/#contato')
+  await page.goto('/#estudio')
   await expect(page.locator('.site-shell')).toHaveAttribute('aria-hidden', 'false')
-  await expect(page.locator('#contato')).toBeInViewport()
+  await expect(page.locator('#estudio')).toBeInViewport()
   await expect(page.locator('.intro-stage')).toBeHidden()
   await page.reload()
-  await expect(page.locator('#contato')).toBeInViewport()
+  await expect(page.locator('#estudio')).toBeInViewport()
 })

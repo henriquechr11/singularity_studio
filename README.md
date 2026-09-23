@@ -36,7 +36,7 @@ A abertura usa um trecho de scroll de `1000svh` (10 telas) no desktop e `850svh`
 | 84–91% | Escurecimento gradual no horizonte de eventos. |
 | 92–100% | Canvas desaparece; a hero é fixada no topo por um segundo enquanto header, título, visual e controles entram em sequência. |
 
-As coordenadas ficam em `src/cinematic/cameraPath.js`. O progresso usa damping exponencial independente da taxa de quadros e limite de velocidade para suavizar rolagens bruscas; câmera, lente, blackout e hero compartilham esse progresso. Após o primeiro scroll, a câmera permanece sob controle da rolagem, inclusive ao retornar ao topo. A travessia é reversível. Links diretos, rolagem restaurada e Escape permitem chegar ao conteúdo sem exigir a sequência inteira. A lente acompanha o centro projetado da singularidade, inclusive durante o close lateral.
+As coordenadas ficam em `src/cinematic/cameraPath.js`. O progresso usa damping exponencial independente da taxa de quadros e limite de velocidade para suavizar rolagens bruscas; câmera, lente, blackout e hero compartilham esse progresso. Durante a travessia, a câmera acompanha o scroll nos dois sentidos. Depois de chegar à hero, a introdução não reabre ao voltar ao topo. Links diretos, rolagem restaurada e Escape permitem chegar ao conteúdo sem exigir a sequência inteira. A lente acompanha o centro projetado da singularidade, inclusive durante o close lateral.
 
 - Desktop: bloom, distorção radial, separação cromática e rastro na aproximação, DPR máximo de 1,5.
 - Mobile, ponteiro de toque ou memória limitada: renderização direta sem pós-processamento, menos estrelas, DPR 1 e limite de 30 FPS. O desktop também reduz efeitos se detectar quadros lentos sustentados.
@@ -73,7 +73,7 @@ Shift + arraste para pan; no toque, use dois dedos para zoom e pan. Com o canvas
 em foco, as setas movem a câmera e `+` / `-` aproximam e afastam.
 
 - `src/Pulsar.jsx` integra a landing ao diálogo do projeto PULSAR.
-- `src/pulsar/landing.js` reúne os textos, o IntersectionObserver e as opções de personalização.
+- `src/pulsar/landing.js` reúne os textos, a integração das animações e as opções de personalização.
   `PULSAR_MODEL_URL` vazio usa o modelo procedural; substitua por `/models/pulsar.glb`
   para carregar GLB/GLTF (centralizado e dimensionado automaticamente).
   `PULSAR_HOTSPOTS` define legendas, descrições e posições `[x, y, z]` em unidades 3D.
@@ -118,3 +118,7 @@ npm run test:e2e
 Os testes de navegador precisam do Google Chrome instalado. A configuração em `playwright.config.js` inicia o Vite na porta 5173 automaticamente ou reutiliza o servidor local existente.
 
 Os testes cobrem o download e decodificação do GLB, o close lateral, a ausência de textos e controles na abertura, a trajetória lenta e reversão por scroll, revelação da hero, teclado, mobile e rotação de viewport, falhas de modelo/Draco/WebGL/contexto, economia de dados, movimento reduzido inicial e alterado durante a sessão, links diretos, navegação móvel, projetos, modais, acordeão, idioma persistido e briefing. Capturas das etapas ficam em `test-results/`, ignorado pelo Git.
+
+## Animações de scroll
+
+Framer Motion e GSAP/ScrollTrigger controlam as novas entradas, cascatas, parallax e contadores. Veja [a documentação por arquivo e os pontos de ajuste](docs/scroll-animations.md).

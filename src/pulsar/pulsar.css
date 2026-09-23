@@ -140,14 +140,18 @@
 .pulsar-fact strong { display: block; font-size: 46px; font-weight: 400; letter-spacing: -2px; line-height: 1.3; color: #def7ff; }
 .pulsar-fact strong small { font-size: 16px; letter-spacing: -.4px; }
 .pulsar-fact strong > span { color: var(--pulsar-violet); font-size: 28px; }
+/* Reserve the final number's exact width; only its visual overlay is updated. */
+.pulsar-fact strong > .pulsar-counter { position: relative; display: inline-block; color: inherit; font-size: inherit; }
+.pulsar-counter-final { opacity: 0; }
+.pulsar-counter-value { position: absolute; inset: 0; }
 .pulsar-fact h3 { font-size: 14px; font-weight: 500; margin: 14px 0 10px; color: #d5e0f2; }
 .pulsar-fact p { max-width: 300px; font-size: 12px; line-height: 1.85; color: var(--pulsar-muted); }
 .pulsar-mount .pulsar-closing { padding: 80px 0; font-family: 'Space Grotesk', sans-serif; text-align: center; font-size: clamp(24px, 3.5vw, 42px); line-height: 1.35; letter-spacing: -.04em; color: #c8d4e8; }
 .pulsar-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding-top: 24px; border-top: 1px solid #a58bfa25; }
 .pulsar-footer > span:nth-child(2) { font-size: 11px; color: var(--pulsar-muted); }
 .pulsar-mount .pulsar-top { border: 0; padding: 0; font-size: 11px; }
-.pulsar-reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s ease, transform .7s ease; }
-.pulsar-reveal.is-visible { opacity: 1; transform: none; }
+/* Content is visible without animation setup. GSAP exclusively owns reveals. */
+.pulsar-reveal { opacity: 1; }
 
 /* The PULSAR project opens as a full-page experience; all other dialogs retain their layout. */
 .project-dialog.pulsar-dialog { width: 100%; height: 100dvh; max-height: 100dvh; max-width: none; margin: 0; border: 0; border-radius: 0; background: #05070f; }
